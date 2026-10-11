@@ -61,7 +61,7 @@ internal class Program
         Console.WriteLine($"Parameter: v0 = {v0:F1} m/s, alpha = {alphaDeg:F1}°");
         Console.WriteLine($"Analytisch: t_Flug = {tAna:F3} s | x_Impact = {xAna:F2} m | y_Max = {yMaxAna:F2} m\n");
 
-        double[] stepSizes = [0.1, 0.01];
+        double[] stepSizes = [0.2,0.1, 0.01];
 
         foreach (double dt in stepSizes)
         {
@@ -89,7 +89,8 @@ internal class Program
             Console.WriteLine($"  y_Max    = {yMaxNum:F2} m (Fehler: {yMaxNum - yMaxAna:+0.000;-0.000} m)\n");
         }
 
-        Console.WriteLine("Hinweis: In X ist der Fehler numerisch exakt 0, da ax = 0 konstant ist!");
+        Console.WriteLine("Hinweis: x(t) selbst ist exakt (ax = 0), aber der Aufprall erfolgt um ca. dt zu spät,");
+        Console.WriteLine("weil Euler die Höhe y systematisch überschätzt. Dadurch ist x_Impact um ca. vx * dt zu groß.");
     }
 
     /// <summary>
