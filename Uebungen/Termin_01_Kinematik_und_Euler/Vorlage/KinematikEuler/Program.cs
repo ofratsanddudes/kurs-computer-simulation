@@ -1,4 +1,7 @@
+using System.Globalization;
 using KinematikEuler.Models;
+using KinematikEuler.Output;
+using KinematikEuler.Simulation;
 using KinematikEuler.Solvers;
 
 namespace KinematikEuler;
@@ -9,6 +12,9 @@ internal class Program
 
     public static void Main(string[] args)
     {
+        // Einheitliche Dezimalpunktausgabe (Punkt statt Komma)
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+
         Console.WriteLine("===============================================================");
         Console.WriteLine("  Termin 01: Kinematik, Zustandsraum & Expliziter Euler-Integrator");
         Console.WriteLine("  Kurs: Systemsimulation / Digitaler Zwilling (FH OÖ Campus Wels)");
@@ -23,29 +29,48 @@ internal class Program
         string? input = Console.ReadLine();
         char choice = string.IsNullOrWhiteSpace(input) ? '1' : input.Trim()[0];
 
-        switch (choice)
+        try
         {
-            case '2':
-                RunTrackA_HydraulicCylinder();
-                break;
-            case '3':
-                RunTrackB_ArtilleryGame();
-                break;
-            default:
-                RunSprint_BallisticTrajectory();
-                break;
+            switch (choice)
+            {
+                case '2':
+                    RunTrackA_HydraulicCylinder();
+                    break;
+                case '3':
+                    RunTrackB_ArtilleryGame();
+                    break;
+                default:
+                    RunSprint_BallisticTrajectory();
+                    break;
+            }
         }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"\n[FEHLER]: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+            Console.ResetColor();
+        }
+
+        // Tastaturpuffer leeren, falls noch ein Enter ansteht
+        while (Console.KeyAvailable)
+        {
+            Console.ReadKey(true);
+        }
+
+        Console.WriteLine("\nDrücken Sie eine beliebige Taste, um das Fenster zu schließen...");
+        Console.ReadKey(true);
     }
 
     /// <summary>
     /// Stufe A: In-Class Sprint - Schiefer Wurf im Vakuum.
-    /// Vergleich des expliziten Euler-Verfahrens mit der geschlossenen analytischen Lösung.
+    /// Vergleich des expliziten Euler-Verfahrens mit der analytischen Lösung.
     /// </summary>
     public static void RunSprint_BallisticTrajectory()
     {
         Console.WriteLine("\n--- [Stufe A Sprint] Schiefer Wurf im Vakuum ---");
 
-        // Physikalische Randbedingungen:
+        // Physikalische Randbedingungen
         double v0 = 150.0;             // Abgangsgeschwindigkeit [m/s]
         double alphaDeg = 45.0;        // Abschusswinkel [Grad]
         double alphaRad = alphaDeg * Math.PI / 180.0;
@@ -53,7 +78,7 @@ internal class Program
         double vx0 = v0 * Math.Cos(alphaRad);
         double vy0 = v0 * Math.Sin(alphaRad);
 
-        // Analytische Vakuumlösung:
+        // Analytische Vakuumlösung
         double tAna = 2.0 * vy0 / G;
         double xAna = (v0 * v0 * Math.Sin(2.0 * alphaRad)) / G;
         double yMaxAna = (vy0 * vy0) / (2.0 * G);
@@ -61,7 +86,7 @@ internal class Program
         Console.WriteLine($"Parameter: v0 = {v0:F1} m/s, alpha = {alphaDeg:F1}°");
         Console.WriteLine($"Analytisch: t_Flug = {tAna:F3} s | x_Impact = {xAna:F2} m | y_Max = {yMaxAna:F2} m\n");
 
-        double[] stepSizes = [0.2,0.1, 0.01];
+        double[] stepSizes = [0.1, 0.01];
 
         foreach (double dt in stepSizes)
         {
@@ -75,10 +100,10 @@ internal class Program
                     yMaxNum = state.Y;
 
                 previous = state;
-                state = EulerIntegrator.StepEuler(state, dt, s => (0.0, -G));
+                state = EulerIntegrator.StepEuler(state, dt, _ => (0.0, -G));
             }
 
-            // Exakte Schnittpunkt-Interpolation bei Bodenberührung
+            // Lineare Schnittpunkt-Interpolation bei Bodenberührung (y = 0)
             var impactState = EulerIntegrator.InterpolateGroundImpact(previous, state);
             double diffX = impactState.X - xAna;
             double diffT = impactState.Time - tAna;
@@ -88,32 +113,61 @@ internal class Program
             Console.WriteLine($"  x_Impact = {impactState.X:F2} m (Fehler: {diffX:+0.000;-0.000} m)");
             Console.WriteLine($"  y_Max    = {yMaxNum:F2} m (Fehler: {yMaxNum - yMaxAna:+0.000;-0.000} m)\n");
         }
-
-        Console.WriteLine("Hinweis: x(t) selbst ist exakt (ax = 0), aber der Aufprall erfolgt um ca. dt zu spät,");
-        Console.WriteLine("weil Euler die Höhe y systematisch überschätzt. Dadurch ist x_Impact um ca. vx * dt zu groß.");
     }
 
     /// <summary>
-    /// Stufe B: Track A - Hydraulikzylinder-Endlagendämpfung (Gerüst).
+    /// Stufe B: Track A - Hydraulikzylinder-Endlagendämpfung.
+    /// Parameterstudie über Euler vs. Heun mit CSV-Export.
     /// </summary>
     private static void RunTrackA_HydraulicCylinder()
     {
-        Console.WriteLine("\n--- [Stufe B Track A] Hydraulikzylinder-Endlagendämpfung ---");
-        Console.WriteLine("// TODO: [Stufe B Track A] Implementieren Sie:");
-        Console.WriteLine("   1. HydraulicCylinderModel mit Kraft F_vor = 60 kN und Blendenreibung.");
-        Console.WriteLine("   2. Vergleich Euler vs. Heun (RK2) bei dt in {10µs, 100µs, 500µs, 2ms}.");
-        Console.WriteLine("   3. CSV-Export nach simulation_cylinder.csv.");
+        Console.WriteLine("\n=======================================================");
+        Console.WriteLine("  Track A: Hydraulikzylinder-Endlagendämpfung");
+        Console.WriteLine("=======================================================");
+
+        var model = new HydraulicCylinderModel();
+        var integrators = new IIntegrator[] { new EulerSolver(), new HeunSolver() };
+
+        // Vorgegebene Schrittweiten: 10 µs, 100 µs, 500 µs, 2 ms
+        double[] stepSizes = [10e-6, 100e-6, 500e-6, 2e-3];
+
+        var results = new List<SimulationResult>();
+        SimulationResult? exportRun = null;
+
+        foreach (var integrator in integrators)
+        {
+            var sim = new CylinderSimulation(model, integrator);
+            foreach (double dt in stepSizes)
+            {
+                // Nur den feinsten Heun-Lauf als Referenz für die CSV speichern (schont Speicher)
+                bool shouldRecord = (integrator is HeunSolver && Math.Abs(dt - 10e-6) < 1e-9);
+                var res = sim.Run(dt, 0.10, shouldRecord);
+                results.Add(res);
+
+                if (shouldRecord)
+                {
+                    exportRun = res;
+                }
+            }
+        }
+
+        // Tabellarischer Konsolenbericht mit bündigem Layout und Grenzwert-Analyse
+        ConsoleReport.PrintResults(results);
+
+        // CSV-Export der Trajektorie
+        if (exportRun != null && exportRun.Trajectory.Count > 0)
+        {
+            CSVExporter.Export("simulation_cylinder.csv", exportRun.Trajectory);
+            Console.WriteLine("Referenztrajektorie (Heun, dt=10µs) nach 'simulation_cylinder.csv' exportiert.");
+        }
     }
 
     /// <summary>
-    /// Stufe B: Track B - Artillery Duel mit Newton-Drag & Wind (Gerüst).
+    /// Platzhalter für den nicht gewählten Track B.
     /// </summary>
     private static void RunTrackB_ArtilleryGame()
     {
         Console.WriteLine("\n--- [Stufe B Track B] Retro Artillery Duel ---");
-        Console.WriteLine("// TODO: [Stufe B Track B] Implementieren Sie:");
-        Console.WriteLine("   1. Quadratischen Newton-Luftwiderstand F_drag = 0.5 * rho * Cw * A * v_rel^2.");
-        Console.WriteLine("   2. Stochastische Windböen v_wind(t).");
-        Console.WriteLine("   3. Rundenbasiertes 2-Spieler-Konsolenspiel.");
+        Console.WriteLine("Track B wurde nicht gewählt (Track A Industrie & Mechatronik ist aktiv).");
     }
 }
