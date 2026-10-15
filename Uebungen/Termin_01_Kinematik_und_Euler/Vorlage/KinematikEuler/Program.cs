@@ -3,17 +3,21 @@ using KinematikEuler.Models;
 using KinematikEuler.Output;
 using KinematikEuler.Simulation;
 using KinematikEuler.Solvers;
+using System.Text;
 
 namespace KinematikEuler;
 
 internal class Program
 {
     private const double G = 9.81; // Erdbeschleunigung [m/s^2]
+    private const double TEnd = 0.30;   // 0,10 s reicht nicht bis zum Anschlag (siehe README)
 
     public static void Main(string[] args)
     {
         // Einheitliche Dezimalpunktausgabe (Punkt statt Komma)
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+        Console.OutputEncoding = Encoding.UTF8;
 
         Console.WriteLine("===============================================================");
         Console.WriteLine("  Termin 01: Kinematik, Zustandsraum & Expliziter Euler-Integrator");
@@ -119,6 +123,10 @@ internal class Program
     /// Stufe B: Track A - Hydraulikzylinder-Endlagendämpfung.
     /// Parameterstudie über Euler vs. Heun mit CSV-Export.
     /// </summary>
+    /// <summary>
+    /// Stufe B: Track A - Hydraulikzylinder-Endlagendämpfung.
+    /// Parameterstudie Euler vs. Heun mit Stabilitätsgrenzen und CSV-Export.
+    /// </summary>
     private static void RunTrackA_HydraulicCylinder()
     {
         Console.WriteLine("\n=======================================================");
@@ -131,34 +139,15 @@ internal class Program
         // Vorgegebene Schrittweiten: 10 µs, 100 µs, 500 µs, 2 ms
         double[] stepSizes = [10e-6, 100e-6, 500e-6, 2e-3];
 
-        var results = new List<SimulationResult>();
-        SimulationResult? exportRun = null;
+        var study = StabilityStudy.Run(model, integrators, stepSizes, TEnd);
 
-        foreach (var integrator in integrators)
+        ConsoleReport.PrintStudy(study, TEnd);
+
+        // CSV-Export der Referenztrajektorie
+        if (study.Reference.Trajectory.Count > 0)
         {
-            var sim = new CylinderSimulation(model, integrator);
-            foreach (double dt in stepSizes)
-            {
-                // Nur den feinsten Heun-Lauf als Referenz für die CSV speichern (schont Speicher)
-                bool shouldRecord = (integrator is HeunSolver && Math.Abs(dt - 10e-6) < 1e-9);
-                var res = sim.Run(dt, 0.10, shouldRecord);
-                results.Add(res);
-
-                if (shouldRecord)
-                {
-                    exportRun = res;
-                }
-            }
-        }
-
-        // Tabellarischer Konsolenbericht mit bündigem Layout und Grenzwert-Analyse
-        ConsoleReport.PrintResults(results);
-
-        // CSV-Export der Trajektorie
-        if (exportRun != null && exportRun.Trajectory.Count > 0)
-        {
-            CSVExporter.Export("simulation_cylinder.csv", exportRun.Trajectory);
-            Console.WriteLine("Referenztrajektorie (Heun, dt=10µs) nach 'simulation_cylinder.csv' exportiert.");
+            CSVExporter.Export("simulation_cylinder.csv", study.Reference.Trajectory);
+            Console.WriteLine($"Referenztrajektorie ({study.Reference.SolverName}, dt = 10 µs) nach 'simulation_cylinder.csv' exportiert.");
         }
     }
 

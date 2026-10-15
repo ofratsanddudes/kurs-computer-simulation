@@ -1,100 +1,91 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using KinematikEuler.Simulation;
+﻿using KinematikEuler.Simulation;
 
 namespace KinematikEuler.Output;
 
 public static class ConsoleReport
 {
-    public static void PrintResults(List<SimulationResult> results)
+    public static void PrintStudy(StudyResult study, double tEnd)
     {
-        // Spaltenbreiten: Solver (13), dt (9), a_min (14), x_max (12), Status (10)
-        const string divider = "+---------------+-----------+----------------+--------------+------------+";
+        var reference = study.Reference;
 
-        Console.WriteLine("\n" + divider);
-        Console.WriteLine("| Solver        | dt        | a_min [m/s²]   | x_max [m]    | Status     |");
+        Console.WriteLine($"\nSimulationsdauer t_end = {tEnd:F2} s");
+        Console.WriteLine($"Referenz: {reference.SolverName}, dt = {FormatDt(reference.Dt)}");
+
+        if (reference.IsStable && reference.ContactTime is double tRef)
+        {
+            Console.WriteLine($"  erster Kontakt bei t = {tRef * 1e3:F3} ms mit v = {reference.ContactVelocity:F3} m/s");
+            Console.WriteLine($"  maximaler Anschlagweg = {reference.MaxPenetration * 1e3:F3} mm");
+        }
+        else
+        {
+            Console.WriteLine("  Achtung: Die Referenz hat den Anschlag nicht erreicht (t_end zu kurz?).");
+        }
+        Console.WriteLine();
+
+        string header = Line("Solver", "dt", "Status", "a_min [m/s²]", "s_Anschlag [mm]", "t_Kontakt [ms]", "Δt_K [ms]");
+        string divider = new string('-', header.Length);
+
+        Console.WriteLine(divider);
+        Console.WriteLine(header);
         Console.WriteLine(divider);
 
-        foreach (var r in results)
+        foreach (var row in study.Rows)
         {
-            string dtStr = r.Dt switch
-            {
-                >= 1e-3 => $"{r.Dt * 1e3:F1} ms",
-                _ => $"{r.Dt * 1e6:F0} µs"
-            };
-
-            string aMinStr = r.IsStable
-                ? string.Format(CultureInfo.InvariantCulture, "{0,14:F2}", r.AMin)
-                : "           NaN";
-
-            string xMaxStr = r.IsStable
-                ? string.Format(CultureInfo.InvariantCulture, "{0,12:F4}", r.XMax)
-                : "         NaN";
-
-            string statusStr = r.IsStable ? "STABIL" : "INSTABIL";
-
-            // Die gesamte Tabellenzeile wird als ein String gedruckt
-            string row = $"| {r.SolverName,-13} | {dtStr,-9} | {aMinStr} | {xMaxStr} | {statusStr,-10} |";
+            var r = row.Run;
 
             if (r.IsStable)
             {
-                Console.WriteLine(row);
+                string tK = r.ContactTime is double tc ? $"{tc * 1e3:F3}" : "-";
+                string dK = row.ContactTimeError is double e ? $"{e * 1e3:+0.000;-0.000;0.000}" : "-";
+
+                Console.WriteLine(Line(
+                    r.SolverName, FormatDt(r.Dt), "STABIL",
+                    $"{r.AMin:F0}", $"{r.MaxPenetration * 1e3:F3}", tK, dK));
             }
             else
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(row);
+                Console.WriteLine(Line(r.SolverName, FormatDt(r.Dt), "INSTABIL", "NaN", "NaN", "-", "-"));
                 Console.ResetColor();
             }
         }
 
-        Console.WriteLine(divider + "\n");
+        Console.WriteLine(divider);
+        Console.WriteLine("Δt_K = Abweichung des Kontaktzeitpunkts von der Referenz (stabil ≠ genau).\n");
 
-        PrintStabilityLimits(results);
+        PrintLimits(study);
     }
 
-    private static void PrintStabilityLimits(List<SimulationResult> results)
+    private static void PrintLimits(StudyResult study)
     {
         Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.WriteLine("=== STABILITÄTSGRENZEN (dt_krit) ===");
+        Console.WriteLine($"=== STABILITÄTSGRENZEN (Raster {study.SweepStep * 1e6:F0} µs) ===");
         Console.ResetColor();
 
-        var grouped = results.GroupBy(r => r.SolverName);
-
-        foreach (var group in grouped)
+        foreach (var l in study.Limits)
         {
-            string solverName = group.Key;
-            var runs = group.OrderBy(r => r.Dt).ToList();
+            string safeText = double.IsNaN(l.DtSafe)
+                ? "kein stabiler Wert gefunden"
+                : $"stabil bis {FormatDt(l.DtSafe)}";
 
-            var maxStable = runs.Where(r => r.IsStable).LastOrDefault();
-            var minUnstable = runs.Where(r => !r.IsStable).FirstOrDefault();
+            string unstableText = l.DtUnsafe is double u
+                ? $"ab {FormatDt(u)} immer instabil"
+                : "im getesteten Bereich nie instabil";
 
-            Console.Write($"  • {solverName,-13}: ");
+            Console.WriteLine($"  • {l.SolverName,-12}: {safeText} | {unstableText}");
 
-            if (maxStable != null && minUnstable != null)
+            if (l.GrayZoneRuns > 0)
             {
-                string dtStableStr = FormatDt(maxStable.Dt);
-                string dtUnstableStr = FormatDt(minUnstable.Dt);
-
-                Console.WriteLine($"Stabil bis {dtStableStr} | Instabil ab {dtUnstableStr}");
-            }
-            else if (minUnstable == null)
-            {
-                Console.WriteLine("Stabil für alle getesteten Zeitschritte");
-            }
-            else
-            {
-                Console.WriteLine("Instabil für alle getesteten Zeitschritte");
+                Console.WriteLine($"      dazwischen {l.GrayZoneRuns} getestete Werte mit unregelmäßigem Verhalten (hängt von der Lage des Zeitgitters ab)");
             }
         }
 
         Console.WriteLine();
     }
 
-    private static string FormatDt(double dt)
-    {
-        return dt >= 1e-3 ? $"{dt * 1e3:F1} ms" : $"{dt * 1e6:F0} µs";
-    }
+    private static string Line(string solver, string dt, string status, string aMin, string s, string tK, string dK) =>
+        $"| {solver,-11} | {dt,-8} | {status,-8} | {aMin,12} | {s,15} | {tK,14} | {dK,9} |";
+
+    private static string FormatDt(double dt) =>
+        dt >= 1e-3 ? $"{dt * 1e3:F2} ms" : $"{dt * 1e6:F0} µs";
 }
