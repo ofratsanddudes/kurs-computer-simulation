@@ -14,6 +14,7 @@ public enum BoundaryMode
 /// <summary>
 /// 2D-Temperaturgitter mit FDM-Laplace-Stern (5-Punkt-Schablone) zur Lösung
 /// der instationären Wärmeleitungsgleichung dT/dt = alpha * Laplace(T).
+/// Erweitert um ein ortsabhängiges Materialgitter (alpha je Zelle) und innere Isolatorwände.
 /// </summary>
 public class HeatGrid
 {
@@ -23,8 +24,23 @@ public class HeatGrid
     /// <summary>Gitterabstand Delta x = Delta y in Metern [m].</summary>
     public float Dx { get; set; } = 0.001f;
 
-    /// <summary>Temperaturleitfähigkeit alpha = lambda / (rho * c_p) in [m^2/s].</summary>
-    public float Alpha { get; set; } = 1.0e-4f;
+    /// <summary>
+    /// Temperaturleitfähigkeit alpha = lambda / (rho * c_p) in [m^2/s] für normales Material.
+    /// Beim Setzen werden alle Nicht-Wand-Zellen der _alphaMap nachgeführt, damit der
+    /// Slider (und die Tests) weiterhin wirken.
+    /// </summary>
+    public float Alpha
+    {
+        get => _alpha;
+        set
+        {
+            _alpha = value;
+            for (int y = 0; y < Height; y++)
+                for (int x = 0; x < Width; x++)
+                    if (_alphaMap[x, y] != 0f)      // Wandzellen (alpha = 0) bleiben Wand
+                        _alphaMap[x, y] = value;
+        }
+    }
 
     /// <summary>Zeitschrittweite Delta t in Sekunden [s].</summary>
     public float Dt { get; set; } = 0.002f;
@@ -38,11 +54,17 @@ public class HeatGrid
     /// <summary>Zentraler Hotspot aktiv halten (Dauer-Wärmequelle).</summary>
     public bool MaintainHotspot { get; set; } = true;
 
+    private float _alpha = 1.0e-4f;
+
+    // Ping-Pong-Puffer: _tCurrent nur lesen, _tNext nur schreiben, am Ende tauschen
     private float[,] _tCurrent;
     private float[,] _tNext;
 
+    // Materialgitter: alpha je Zelle. alpha == 0 bedeutet Isolator-Wand.
+    private readonly float[,] _alphaMap;
+
     /// <summary>
-    /// CFL-Diffusionszahl: s = alpha * dt / (dx^2).
+    /// CFL-Diffusionszahl für normales Material: s = alpha * dt / (dx^2).
     /// Für ein stabiles 2D-Verfahren MUSS s <= 0.25 (1/4) gelten!
     /// </summary>
     public float StabilityFactor => (Alpha * Dt) / (Dx * Dx);
@@ -63,11 +85,13 @@ public class HeatGrid
         Height = height;
         _tCurrent = new float[width, height];
         _tNext = new float[width, height];
+        _alphaMap = new float[width, height];   // muss vor Reset() existieren
         Reset();
     }
 
     /// <summary>
-    /// Setzt das Gitter auf Umgebungstemperatur zurück und platziert den zentralen Hotspot.
+    /// Setzt das Gitter auf Umgebungstemperatur zurück, entfernt alle Wände
+    /// und platziert den zentralen Hotspot.
     /// </summary>
     public void Reset()
     {
@@ -77,6 +101,7 @@ public class HeatGrid
             {
                 _tCurrent[x, y] = AmbientTemperature;
                 _tNext[x, y] = AmbientTemperature;
+                _alphaMap[x, y] = _alpha;       // überall wieder normales Material
             }
         }
 
@@ -88,6 +113,7 @@ public class HeatGrid
 
     /// <summary>
     /// Erzeugt eine Wärmequelle (z. B. 100 °C) in der Gittermitte.
+    /// Wandzellen werden übersprungen, damit der Hotspot keine Wände "überschreibt".
     /// </summary>
     public void ApplyHotspot(float[,] grid, float temp = 100.0f)
     {
@@ -99,7 +125,7 @@ public class HeatGrid
         {
             for (int x = midX - radius; x <= midX + radius; x++)
             {
-                if (x >= 0 && x < Width && y >= 0 && y < Height)
+                if (x >= 0 && x < Width && y >= 0 && y < Height && _alphaMap[x, y] != 0f)
                 {
                     grid[x, y] = temp;
                 }
@@ -109,27 +135,42 @@ public class HeatGrid
 
     /// <summary>
     /// Führt einen FDM-Zeitschritt über den 5-Punkt-Differenzenstern aus.
-    /// T^{k+1}_{x,y} = T^k_{x,y} + s * (T_{x+1,y} + T_{x-1,y} + T_{x,y+1} + T_{x,y-1} - 4*T_{x,y})
+    /// T^{k+1} = T^k + s_xy * (T_rechts + T_links + T_unten + T_oben - 4*T), mit s_xy = alpha_xy * dt / dx^2.
+    /// An Wand-Nachbarn wird die eigene Temperatur gespiegelt (lokale Neumann-Bedingung, kein Wärmestrom).
     /// </summary>
     public void Step()
     {
-        float s = StabilityFactor;
+        float dtOverDx2 = Dt / (Dx * Dx);
 
         // FDM-Berechnung für innere Gitterpunkte (1 .. Width-2, 1 .. Height-2)
         for (int y = 1; y < Height - 1; y++)
         {
             for (int x = 1; x < Width - 1; x++)
             {
+                float a = _alphaMap[x, y];
                 float tCenter = _tCurrent[x, y];
-                float tRight  = _tCurrent[x + 1, y];
-                float tLeft   = _tCurrent[x - 1, y];
-                float tUp     = _tCurrent[x, y + 1];
-                float tDown   = _tCurrent[x, y - 1];
 
-                // Laplace-Operator in 2D
-                float laplace = (tRight + tLeft + tUp + tDown - 4.0f * tCenter);
+                // Wandzelle: Temperatur unverändert übernehmen.
+                // Wichtig wegen Ping-Pong: sonst stünde in _tNext ein veralteter Wert.
+                if (a == 0f)
+                {
+                    _tNext[x, y] = tCenter;
+                    continue;
+                }
 
-                _tNext[x, y] = tCenter + s * laplace;
+                // Nachbarn lesen. Ist ein Nachbar eine Wand, nehmen wir die EIGENE Temperatur:
+                // Delta T über diese Kante = 0  ->  Wärmestrom = 0  ->  adiabate Wand.
+                // (Ohne Spiegelung würde die Wand als "Kühlakku" Wärme abziehen.)
+                float tRight = _alphaMap[x + 1, y] == 0f ? tCenter : _tCurrent[x + 1, y];
+                float tLeft = _alphaMap[x - 1, y] == 0f ? tCenter : _tCurrent[x - 1, y];
+                float tDown = _alphaMap[x, y + 1] == 0f ? tCenter : _tCurrent[x, y + 1];
+                float tUp = _alphaMap[x, y - 1] == 0f ? tCenter : _tCurrent[x, y - 1];
+
+                // 5-Punkt-Stern (Laplace-Zähler)
+                float laplace = tRight + tLeft + tDown + tUp - 4.0f * tCenter;
+
+                // Lokale Diffusionszahl s_xy = alpha_xy * dt / dx^2
+                _tNext[x, y] = tCenter + a * dtOverDx2 * laplace;
             }
         }
 
@@ -178,6 +219,39 @@ public class HeatGrid
     }
 
     /// <summary>
+    /// Zeichnet mit einem kreisförmigen Pinsel ins laufende Gitter.
+    /// insulator = true: Isolator-Wand (alpha = 0); false: heiße Quelle (100 °C, nur auf Nicht-Wand-Zellen).
+    /// </summary>
+    public void Paint(int gx, int gy, int radius, bool insulator)
+    {
+        for (int dy = -radius; dy <= radius; dy++)
+        {
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                if (dx * dx + dy * dy > radius * radius) continue;   // kreisförmig
+
+                int x = gx + dx;
+                int y = gy + dy;
+
+                // Nur innere Zellen: der Rand wird von den Randbedingungen verwaltet
+                if (x < 1 || x >= Width - 1 || y < 1 || y >= Height - 1) continue;
+
+                if (insulator)
+                {
+                    _alphaMap[x, y] = 0f;
+                }
+                else if (_alphaMap[x, y] != 0f)
+                {
+                    _tCurrent[x, y] = 100.0f;
+                }
+            }
+        }
+    }
+
+    /// <summary>True, wenn die Zelle eine Isolator-Wand ist (alpha == 0).</summary>
+    public bool IsInsulator(int x, int y) => _alphaMap[x, y] == 0f;
+
+    /// <summary>
     /// Berechnet die thermische Summe / Energiebilanz im Gitter (zu Test- und Validierungszwecken).
     /// </summary>
     public double CalculateTotalHeatSum()
@@ -199,22 +273,14 @@ public class HeatGrid
     public float[,] GetCurrentGrid() => _tCurrent;
 
     // =========================================================================
-    // TODO: [Stufe A Sprint]
-    // - Beobachten Sie die Diffusion bei veränderten Werten für Dt und Alpha.
-    // - Erhöhen Sie Dt über CriticalDt (s > 0.25) und dokumentieren Sie die numerische Instabilität.
-    // =========================================================================
-
-    // =========================================================================
     // TODO: [Stufe B Track A: Industrie - CPU-Kühlkörper-Optimizer]
-    // - Modellieren Sie ein ortsabhängiges Materialgitter mit Alpha(x, y):
-    //     Silizium-Die, Wärmeleitpaste (TIM), Kupfer-Heatspreader, Aluminium-Finnen.
-    // - Implementieren Sie den Verlustleistungs-Quellterm dot_q_v im CPU-Die.
-    // - Implementieren Sie Robin-Randbedingungen: -lambda * (dT/dn) = h * (T - T_inf)
-    //   für Lüfterbetrieb (h = 250 W/m^2K) vs. Lüfterausfall (h = 20 W/m^2K).
+    // - Ortsabhängiges Materialgitter mit Alpha(x, y) (Si-Die, TIM, Kupfer, Alu-Finnen)
+    // - Verlustleistungs-Quellterm dot_q_v im CPU-Die
+    // - Robin-Randbedingungen: Lüfterbetrieb (h = 250) vs. Lüfterausfall (h = 20)
     // =========================================================================
 
     // =========================================================================
     // TODO: [Stufe B Track B: Simulation Game - Falling Sand / Doom Fire]
-    // - Erweitern Sie das Gitter um zelluläre Automaten-Partikel oder Konvektionseffekte.
+    // - Zelluläre Automaten-Partikel oder Konvektionseffekte
     // =========================================================================
 }

@@ -34,7 +34,9 @@
                     <Image x:Name="HeatImage" 
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Width="256" Height="256"
-                           SnapsToDevicePixels="True"/>
+                           SnapsToDevicePixels="True"
+                           MouseDown="HeatImage_MouseDown"
+                           MouseMove="HeatImage_MouseMove"/>
                 </Viewbox>
             </Border>
 
