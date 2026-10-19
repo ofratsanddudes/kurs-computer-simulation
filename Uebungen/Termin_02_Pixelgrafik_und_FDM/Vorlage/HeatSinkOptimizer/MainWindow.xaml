@@ -1,0 +1,78 @@
+﻿<Window x:Class="HeatSinkOptimizer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Track A: CPU-Kühlkörper-Optimizer" Height="760" Width="1000"
+        Background="#1E1E1E">
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="290"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Bild: 200 x 200 Zellen, NearestNeighbor hält die Zellen scharf -->
+        <Border Grid.Row="0" Grid.Column="0" Background="#111111" CornerRadius="4"
+                BorderBrush="#3F3F46" BorderThickness="1" Margin="0,0,10,0">
+            <Viewbox Stretch="Uniform">
+                <Image x:Name="HeatImage"
+                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                       Width="200" Height="200" SnapsToDevicePixels="True"/>
+            </Viewbox>
+        </Border>
+
+        <!-- Steuerung -->
+        <Border Grid.Row="0" Grid.Column="1" Background="#252526" CornerRadius="4" Padding="12"
+                BorderBrush="#3F3F46" BorderThickness="1">
+            <StackPanel>
+                <TextBlock Text="Steuerung" FontWeight="Bold" FontSize="14" Foreground="#E0E0E0" Margin="0,0,0,10"/>
+
+                <UniformGrid Columns="2" Margin="0,0,0,12">
+                    <Button x:Name="BtnStartStop" Content="Start" Click="BtnStartStop_Click" Margin="0,0,4,0" Height="28"/>
+                    <Button x:Name="BtnReset" Content="Zurücksetzen" Click="BtnReset_Click" Margin="4,0,0,0" Height="28"/>
+                </UniformGrid>
+
+                <CheckBox x:Name="ChkFan" Content="Lüfter aktiv (h = 250, sonst 20 W/m²K)" IsChecked="True"
+                          Foreground="#D4D4D4" Checked="FanChanged" Unchecked="FanChanged" Margin="0,0,0,12"/>
+
+                <TextBlock Text="Substeps pro Frame:" Foreground="#D4D4D4"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="SliderSubsteps" Minimum="1" Maximum="500" Value="100" SmallChange="1" LargeChange="25"
+                            ValueChanged="Slider_ValueChanged" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" x:Name="TxtSubsteps" Foreground="#9CDCFE" TextAlignment="Right" VerticalAlignment="Center"/>
+                </Grid>
+
+                <TextBlock Text="Zeitschritt dt / dt_krit:" Foreground="#D4D4D4" Margin="0,10,0,0"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="SliderDtFactor" Minimum="0.1" Maximum="4.0" Value="0.9" SmallChange="0.05" LargeChange="0.25"
+                            ValueChanged="Slider_ValueChanged" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" x:Name="TxtDtFactor" Foreground="#9CDCFE" TextAlignment="Right" VerticalAlignment="Center"/>
+                </Grid>
+
+                <Separator Background="#3F3F46" Margin="0,15,0,15"/>
+
+                <TextBlock Text="CPU-Maximaltemperatur:" FontWeight="Bold" Foreground="#E0E0E0"/>
+                <TextBlock x:Name="TxtCpuTemp" FontSize="24" FontWeight="Bold" Foreground="#FF9060" Margin="0,2,0,0"/>
+                <TextBlock x:Name="TxtSimTime" Foreground="#AAAAAA" FontSize="12" Margin="0,4,0,0"/>
+
+                <Separator Background="#3F3F46" Margin="0,15,0,15"/>
+
+                <TextBlock Text="Stabilität:" FontWeight="Bold" Foreground="#E0E0E0"/>
+                <TextBlock x:Name="TxtStability" Foreground="#98FB98" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                <TextBlock x:Name="TxtDt" Foreground="#CCCCCC" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" x:Name="TxtInfo" Foreground="#AAAAAA" FontSize="12" Margin="0,10,0,0"/>
+    </Grid>
+</Window>
