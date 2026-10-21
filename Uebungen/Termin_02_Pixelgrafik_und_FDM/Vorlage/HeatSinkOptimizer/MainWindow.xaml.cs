@@ -10,7 +10,7 @@ public partial class MainWindow : Window
 {
     // Temperaturbereich der Farbskala [°C]: blau = TempMin, rot = TempMax
     private const float TempMin = 25.0f;
-    private const float TempMax = 300.0f;
+    private const float TempMax = 110.0f;
 
     private const float FanOnH = 250.0f;    // forcierte Konvektion [W/(m^2*K)]
     private const float FanOffH = 20.0f;    // Lüfterausfall: freie Konvektion
@@ -41,10 +41,15 @@ public partial class MainWindow : Window
     private void OnTick(object? sender, EventArgs e)
     {
         int substeps = (int)SliderSubsteps.Value;
-        for (int k = 0; k < substeps; k++)
-            _grid.Step();
+        float dt = _grid.Dt;
 
-        _simTime += substeps * (double)_grid.Dt;
+        // Führe das konfigurierte Substep-Paket aus
+        for (int k = 0; k < substeps; k++)
+        {
+            _grid.Step();
+        }
+
+        _simTime += substeps * (double)dt;
         RenderFrame();
     }
 

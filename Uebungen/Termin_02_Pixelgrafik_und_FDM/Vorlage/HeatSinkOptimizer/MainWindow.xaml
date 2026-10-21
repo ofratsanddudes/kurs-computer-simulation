@@ -41,10 +41,17 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="50"/>
+                        <ColumnDefinition Width="60"/>
                     </Grid.ColumnDefinitions>
-                    <Slider x:Name="SliderSubsteps" Minimum="1" Maximum="500" Value="100" SmallChange="1" LargeChange="25"
-                            ValueChanged="Slider_ValueChanged" VerticalAlignment="Center"/>
+                    <Slider x:Name="SliderSubsteps" 
+            Minimum="100" 
+            Maximum="2000" 
+            Value="100" 
+            SmallChange="10" 
+            LargeChange="250"
+            IsSnapToTickEnabled="False"
+            ValueChanged="Slider_ValueChanged" 
+            VerticalAlignment="Center"/>
                     <TextBlock Grid.Column="1" x:Name="TxtSubsteps" Foreground="#9CDCFE" TextAlignment="Right" VerticalAlignment="Center"/>
                 </Grid>
 
