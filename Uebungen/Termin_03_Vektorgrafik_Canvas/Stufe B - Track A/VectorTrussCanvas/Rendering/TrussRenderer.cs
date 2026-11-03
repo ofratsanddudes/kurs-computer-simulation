@@ -1,4 +1,7 @@
-﻿using System.Windows;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -17,8 +20,7 @@ namespace VectorTrussCanvas.Rendering;
 /// </summary>
 public static class TrussRenderer
 {
-    // Kraftmaßstab: Pfeillänge in Pixeln pro kN (nicht der Geometriemaßstab!)
-    // Die Länge wird begrenzt, die Pfeilspitze hat dagegen IMMER feste Pixelgröße (siehe VectorArrow).
+    // Kraftmaßstab: Pfeillänge in Pixeln pro kN
     public const double ForceScalePxPerKn = 1.5;
     public const double MinArrowLengthPx = 25.0;
     public const double MaxArrowLengthPx = 130.0;
@@ -27,17 +29,15 @@ public static class TrussRenderer
     private const double DimInnerOffset = 30.0;     // innere horizontale Kette (Teilmaße)
     private const double DimOuterOffset = 60.0;     // äußere horizontale Kette (Gesamtlänge)
     private const double DimVerticalOffset = 40.0;  // vertikale Kette links
-    private const double DimVerticalStep = 35.0;    // zusätzlicher Abstand für die Gesamthöhe bei Zwischenhöhen
+    private const double DimVerticalStep = 35.0;    // zusätzlicher Abstand für Gesamthöhe bei Zwischenhöhen
 
     /// <summary>
-    /// Leert den Canvas und zeichnet das komplette Modell.
+    /// Leert den Canvas und zeichnet das komplette Modell neu.
     /// </summary>
-    /// <param name="selectedNode">Ausgewählter Knoten (wird farblich hervorgehoben) oder null.</param>
     public static void Render(Canvas canvas, TrussGeometry truss, Transform2D t, TrussNode? selectedNode)
     {
         canvas.Children.Clear();
 
-        // Einmal pro Frame: schneller Knotenzugriff über die ID (statt FirstOrDefault pro Stab)
         var nodesById = truss.Nodes.ToDictionary(n => n.Id);
 
         DrawBars(canvas, truss, nodesById, t);
@@ -99,8 +99,8 @@ public static class TrussRenderer
     // =====================================================================
     private static void DrawSupports(Canvas canvas, TrussGeometry truss, Transform2D t)
     {
-        const double h = 18.0;   // Höhe des Dreiecks [px]
-        const double w = 14.0;   // Breite des Dreiecks [px]
+        const double h = 18.0;
+        const double w = 14.0;
 
         foreach (var node in truss.Nodes)
         {
@@ -121,7 +121,6 @@ public static class TrussRenderer
                 StrokeThickness = 1.5
             });
 
-            // Loselager: zusätzliche Rollenlinie unter dem Dreieck
             if (!node.IsFixedSupport && node.IsRollerSupport)
             {
                 canvas.Children.Add(new Line
@@ -138,7 +137,7 @@ public static class TrussRenderer
     }
 
     // =====================================================================
-    // KNOTEN
+    // KNOTEN (mit Millimeter-Auflösung :F3)
     // =====================================================================
     private static void DrawNodes(Canvas canvas, TrussGeometry truss, Transform2D t, TrussNode? selectedNode)
     {
@@ -158,14 +157,14 @@ public static class TrussRenderer
                 StrokeThickness = isSelected ? 2.5 : 1.5,
                 Tag = node
             };
-            // Ellipse wird über die linke obere Ecke positioniert -> Mittelpunkt minus Radius
             Canvas.SetLeft(ellipse, pos.X - radius);
             Canvas.SetTop(ellipse, pos.Y - radius);
             canvas.Children.Add(ellipse);
 
+            // Korrektur auf Millimeter-Auflösung :F3
             var label = new TextBlock
             {
-                Text = $"{node.Name} ({node.X:F1}; {node.Y:F1})",
+                Text = $"{node.Name} ({node.X:F3}; {node.Y:F3})",
                 Foreground = RenderStyles.NodeLabel,
                 FontSize = 10,
                 FontWeight = FontWeights.SemiBold
@@ -186,9 +185,6 @@ public static class TrussRenderer
             if (!nodesById.TryGetValue(load.NodeId, out var node)) continue;
 
             Point pos = t.WorldToScreen(node.X, node.Y);
-
-            // Pfeillänge = Kraftmaßstab * Betrag, begrenzt auf [Min, Max].
-            // Die Richtung (atan2) und die feste Spitzengröße (14 px) übernimmt VectorArrow.
             double magnitude = Math.Sqrt(load.Fx * load.Fx + load.Fy * load.Fy);
             double lengthPx = Math.Clamp(magnitude * ForceScalePxPerKn, MinArrowLengthPx, MaxArrowLengthPx);
 
@@ -197,63 +193,68 @@ public static class TrussRenderer
     }
 
     // =====================================================================
-    // DIN-406-BEMASSUNGSKETTEN
+    // DIN-406-BEMASSUNGSKETTEN (zweistufig horizontal & vertikal)
     // =====================================================================
     private static void DrawDimensionChains(Canvas canvas, TrussGeometry truss, Transform2D t)
     {
-        const double eps = 1e-3;   // Toleranz für "liegt auf derselben Linie" [m]
-        var (xMin, _, yMin, yMax) = truss.GetBounds();
+        if (truss.Nodes.Count < 2) return;
+
+        var (xMin, xMax, yMin, yMax) = truss.GetBounds();
+
+        // Basis-Y für die Maßketten: immer unterhalb des tiefsten Punktes aller Knoten
+        double bottomScreenY = t.WorldToScreen(0.0, yMin).Y;
 
         // ---------- HORIZONTAL ----------
-        // Untergurt = alle Knoten auf Höhe yMin, von links nach rechts
-        var bottomNodes = truss.Nodes
-            .Where(n => Math.Abs(n.Y - yMin) < eps)
+        // 1. Untergurt-Knoten ermitteln:
+        // Haben wir Untergurt-Knoten (Name fängt mit 'U' an)? Wenn ja, nimm diese (topologisch stabil!),
+        // andernfalls nimm Knoten nahe der unteren Hälfte sortiert nach X.
+        var namedBottomNodes = truss.Nodes
+            .Where(n => n.Name.StartsWith("U", StringComparison.OrdinalIgnoreCase))
             .OrderBy(n => n.X)
             .ToList();
 
-        double baseY = t.WorldToScreen(0.0, yMin).Y;
+        var bottomNodes = namedBottomNodes.Count >= 2
+            ? namedBottomNodes
+            : truss.Nodes.OrderBy(n => n.X).ToList();
 
-        if (bottomNodes.Count >= 2)
+        bool hasSubDimensions = bottomNodes.Count >= 3;
+
+        // Stufe 1 (Innere Kette bei +30 px): Bemaßung aller Abschnitte (keiner verschwindet mehr!)
+        if (hasSubDimensions)
         {
-            // Bei nur zwei Knoten wäre das Teilmaß gleich dem Gesamtmaß -> nur eine Kette
-            bool hasInnerChain = bottomNodes.Count >= 3;
-
-            // Stufe 1: Teilmaße aller benachbarten Untergurtknoten
-            if (hasInnerChain)
+            double innerY = bottomScreenY + DimInnerOffset;
+            for (int i = 0; i < bottomNodes.Count - 1; i++)
             {
-                for (int i = 0; i < bottomNodes.Count - 1; i++)
-                {
-                    var n1 = bottomNodes[i];
-                    var n2 = bottomNodes[i + 1];
+                var n1 = bottomNodes[i];
+                var n2 = bottomNodes[i + 1];
 
-                    VectorArrow.AddHorizontalDimensionLine(
-                        canvas,
-                        t.WorldToScreen(n1.X, n1.Y),
-                        t.WorldToScreen(n2.X, n2.Y),
-                        baseY + DimInnerOffset,
-                        $"{n2.X - n1.X:F2} m",
-                        RenderStyles.Dimension);
-                }
+                VectorArrow.AddHorizontalDimensionLine(
+                    canvas,
+                    t.WorldToScreen(n1.X, n1.Y),
+                    t.WorldToScreen(n2.X, n2.Y),
+                    innerY,
+                    $"{Math.Abs(n2.X - n1.X):F2} m",
+                    RenderStyles.Dimension);
             }
-
-            // Stufe 2: Gesamtlänge
-            var first = bottomNodes.First();
-            var last = bottomNodes.Last();
-            double outerY = hasInnerChain ? baseY + DimOuterOffset : baseY + DimInnerOffset;
-
-            VectorArrow.AddHorizontalDimensionLine(
-                canvas,
-                t.WorldToScreen(first.X, first.Y),
-                t.WorldToScreen(last.X, last.Y),
-                outerY,
-                $"{last.X - first.X:F2} m",
-                RenderStyles.Dimension);
         }
 
+        // Stufe 2 (Äußere Kette): Gesamtlänge über das gesamte Bauwerk (xMin bis xMax)
+        double outerY = hasSubDimensions ? bottomScreenY + DimOuterOffset : bottomScreenY + DimInnerOffset;
+        Point pTotalLeft = t.WorldToScreen(xMin, yMin);
+        Point pTotalRight = t.WorldToScreen(xMax, yMin);
+
+        VectorArrow.AddHorizontalDimensionLine(
+            canvas,
+            pTotalLeft,
+            pTotalRight,
+            outerY,
+            $"{xMax - xMin:F2} m",
+            RenderStyles.Dimension);
+
         // ---------- VERTIKAL ----------
-        // Knoten am linken Rand von unten nach oben
+        // Linke Außenkante (Kran-Mast bzw. linke Stütze)
         var leftEdgeNodes = truss.Nodes
-            .Where(n => Math.Abs(n.X - xMin) < eps)
+            .Where(n => Math.Abs(n.X - xMin) < 1e-2)
             .OrderBy(n => n.Y)
             .ToList();
 
@@ -263,7 +264,7 @@ public static class TrussRenderer
 
         bool hasIntermediateHeights = leftEdgeNodes.Count > 2;
 
-        // Zwischenhöhen (nur wenn mehr als zwei Knoten übereinander liegen)
+        // Zwischenhöhen am Mast
         if (hasIntermediateHeights)
         {
             for (int i = 0; i < leftEdgeNodes.Count - 1; i++)
@@ -281,7 +282,7 @@ public static class TrussRenderer
             }
         }
 
-        // Gesamthöhe (bei Zwischenhöhen eine Stufe weiter außen)
+        // Gesamthöhe
         double totalX = hasIntermediateHeights
             ? leftX - DimVerticalOffset - DimVerticalStep
             : leftX - DimVerticalOffset;
