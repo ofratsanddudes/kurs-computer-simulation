@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -10,15 +12,39 @@ namespace VectorTrussCanvas;
 
 public partial class MainWindow : Window
 {
-    // Aktuelles Fachwerkmodell (Weltkoordinaten in Metern)
     private TrussGeometry _truss;
-
-    // Welt <-> Bildschirm-Transformation (siehe Transform2D.cs)
     private readonly Transform2D _transform = new();
-
-    // Knoten, der gerade mit der Maus gezogen wird (null = kein Drag aktiv)
-    // Dient auch als "Schalter" für den Jitter-Fix (Aufgabe 4).
     private TrussNode? _draggedNode = null;
+
+    // Statisch eingefrorene Pinsel (Freeze-Doktrin: 0 B GC im Render-Tick)
+    private static readonly Brush BarBrush;
+    private static readonly Brush NodeBrush;
+    private static readonly Brush SupportStroke;
+    private static readonly Brush SupportFill;
+    private static readonly Brush LengthLabelBrush;
+
+    static MainWindow()
+    {
+        var bar = new SolidColorBrush(Color.FromRgb(220, 220, 220));
+        bar.Freeze();
+        BarBrush = bar;
+
+        var node = new SolidColorBrush(Color.FromRgb(0, 210, 255));
+        node.Freeze();
+        NodeBrush = node;
+
+        var orange = Brushes.Orange.Clone();
+        orange.Freeze();
+        SupportStroke = orange;
+
+        var orangeTrans = new SolidColorBrush(Color.FromArgb(80, 255, 165, 0));
+        orangeTrans.Freeze();
+        SupportFill = orangeTrans;
+
+        var yellow = new SolidColorBrush(Color.FromRgb(255, 235, 59));
+        yellow.Freeze();
+        LengthLabelBrush = yellow;
+    }
 
     public MainWindow()
     {
@@ -26,9 +52,6 @@ public partial class MainWindow : Window
         _truss = TrussGeometry.CreateSprintTriangle();
     }
 
-    /// <summary>
-    /// Zeichnet das komplette Modell neu (Retained Mode: Canvas leeren, alle Shapes neu erzeugen).
-    /// </summary>
     private void Redraw()
     {
         if (TrussCanvas == null || TrussCanvas.ActualWidth < 10 || TrussCanvas.ActualHeight < 10)
@@ -37,28 +60,20 @@ public partial class MainWindow : Window
         TrussCanvas.Children.Clear();
 
         // -----------------------------------------------------------------
-        // 1. TRANSFORMATION AKTUALISIEREN
-        //    Die Bounding Box wird IMMER berechnet (wird weiter unten für die
-        //    Bemaßung gebraucht). Die Transformation selbst wird aber nur
-        //    aktualisiert, wenn gerade KEIN Knoten gezogen wird.
-        //
-        //    AUFGABE 4 (Jitter-Fix):
-        //    Würde Update() während des Drags laufen, wüchse die Bounding Box,
-        //    der Maßstab schrumpfte und der Knoten "liefe" unter der Maus weg.
-        //    Mit eingefrorener Transformation bleibt der Knoten unter dem Cursor.
-        //    Auto-Fit erfolgt erst nach dem Loslassen (MouseUp -> Redraw).
+        // 1. TRANSFORMATION (Stufe A, Aufgabe 4: Jitter-Fix)
+        // Auto-Fit BoundingBox NUR aktualisieren, wenn gerade KEIN Knoten gezogen wird!
         // -----------------------------------------------------------------
         var (xMin, xMax, yMin, yMax) = _truss.GetBounds();
 
         if (_draggedNode == null)
         {
             _transform.MarginX = 70.0;
-            _transform.MarginY = 70.0;
+            _transform.MarginY = 70.0; // Bietet oben und unten jeweils 70 px Puffer für Bemaßung & Pfeile
             _transform.Update(xMin, xMax, yMin, yMax, TrussCanvas.ActualWidth, TrussCanvas.ActualHeight);
         }
 
         // -----------------------------------------------------------------
-        // 2. STÄBE ZEICHNEN (Line) + STABLÄNGEN-LABELS (AUFGABE 2)
+        // 2. STÄBE ZEICHNEN & EUKLIDISCHE STABLÄNGEN (Stufe A, Aufgabe 2)
         // -----------------------------------------------------------------
         foreach (var bar in _truss.Bars)
         {
@@ -66,7 +81,6 @@ public partial class MainWindow : Window
             var nodeB = _truss.Nodes.FirstOrDefault(n => n.Id == bar.NodeBId);
             if (nodeA == null || nodeB == null) continue;
 
-            // Endpunkte in Bildschirmkoordinaten [px]
             Point pA = _transform.WorldToScreen(nodeA.X, nodeA.Y);
             Point pB = _transform.WorldToScreen(nodeB.X, nodeB.Y);
 
@@ -76,37 +90,33 @@ public partial class MainWindow : Window
                 Y1 = pA.Y,
                 X2 = pB.X,
                 Y2 = pB.Y,
-                Stroke = new SolidColorBrush(Color.FromRgb(220, 220, 220)),
+                Stroke = BarBrush,
                 StrokeThickness = 3.0
             };
             TrussCanvas.Children.Add(line);
 
-            // --- AUFGABE 2: Euklidische Stablänge ---
-            //   L = sqrt( (X_B - X_A)^2 + (Y_B - Y_A)^2 )
-            // Die Länge wird in WELTKOORDINATEN [m] berechnet (nicht in Pixeln!),
-            // sonst wäre sie vom Zoom abhängig.
+            // Stablänge exakt in Weltkoordinaten [m]
             double dx = nodeB.X - nodeA.X;
             double dy = nodeB.Y - nodeA.Y;
-            double length = Math.Sqrt(dx * dx + dy * dy);
+            double lengthM = Math.Sqrt(dx * dx + dy * dy);
 
-            // Mittelpunkt des Stabes in BILDSCHIRMKOORDINATEN: p_mid = (p_A + p_B) / 2
-            // (dort wird das Label platziert)
+            // TextBlock am Bildschirm-Mittelpunkt platzieren
             Point pMid = new Point((pA.X + pB.X) / 2.0, (pA.Y + pB.Y) / 2.0);
 
             var lengthLabel = new TextBlock
             {
-                Text = $"{length:F2} m",
-                Foreground = Brushes.Yellow,
-                FontSize = 11,
-                FontWeight = FontWeights.SemiBold,
-                // halbtransparenter dunkler Hintergrund, damit der Text über dem Stab lesbar bleibt
+                Text = $"{lengthM:F2} m",
+                Foreground = LengthLabelBrush,
+                FontSize = 10,
+                FontWeight = FontWeights.Bold,
                 Background = new SolidColorBrush(Color.FromArgb(160, 20, 20, 20))
             };
-
-            // Textgröße messen, um das Label exakt auf dem Mittelpunkt zu zentrieren
             lengthLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            Canvas.SetLeft(lengthLabel, pMid.X - lengthLabel.DesiredSize.Width / 2.0);
-            Canvas.SetTop(lengthLabel, pMid.Y - lengthLabel.DesiredSize.Height / 2.0);
+            double lblW = lengthLabel.DesiredSize.Width;
+            double lblH = lengthLabel.DesiredSize.Height;
+
+            Canvas.SetLeft(lengthLabel, pMid.X - lblW / 2.0);
+            Canvas.SetTop(lengthLabel, pMid.Y - lblH / 2.0);
             TrussCanvas.Children.Add(lengthLabel);
         }
 
@@ -116,21 +126,14 @@ public partial class MainWindow : Window
         foreach (var node in _truss.Nodes)
         {
             Point pos = _transform.WorldToScreen(node.X, node.Y);
-
             if (node.IsFixedSupport)
-            {
-                // Festlager: Dreieckssymbol unter dem Knoten
                 DrawSupportSymbol(pos, isFixed: true);
-            }
             else if (node.IsRollerSupport)
-            {
-                // Loselager: Dreieck + Rollenlinie
                 DrawSupportSymbol(pos, isFixed: false);
-            }
         }
 
         // -----------------------------------------------------------------
-        // 4. KNOTEN ZEICHNEN (Ellipse + Text-Label)
+        // 4. KNOTEN ZEICHNEN & MILLIMETER-LABELS (Stufe A, Aufgabe 4)
         // -----------------------------------------------------------------
         foreach (var node in _truss.Nodes)
         {
@@ -141,21 +144,19 @@ public partial class MainWindow : Window
             {
                 Width = radius * 2,
                 Height = radius * 2,
-                Fill = new SolidColorBrush(Color.FromRgb(0, 210, 255)),
+                Fill = NodeBrush,
                 Stroke = Brushes.White,
                 StrokeThickness = 1.5,
-                Tag = node // Knoten am Shape merken (für Hit-Testing)
+                Tag = node
             };
-            // Ellipse positioniert sich über die linke obere Ecke der Hüllbox,
-            // daher Mittelpunkt minus Radius, damit der Kreis exakt auf dem Knoten sitzt
             Canvas.SetLeft(ellipse, pos.X - radius);
             Canvas.SetTop(ellipse, pos.Y - radius);
             TrussCanvas.Children.Add(ellipse);
 
-            // Knotenlabel mit Name und Koordinaten
+            // Formatierung mit Millimeter-Auflösung :F3
             var label = new TextBlock
             {
-                Text = $"{node.Name} ({node.X:F1}; {node.Y:F1})",
+                Text = $"{node.Name} ({node.X:F3}; {node.Y:F3})",
                 Foreground = Brushes.LightGreen,
                 FontSize = 10,
                 FontWeight = FontWeights.SemiBold
@@ -166,7 +167,7 @@ public partial class MainWindow : Window
         }
 
         // -----------------------------------------------------------------
-        // 5. LASTPFEILE ZEICHNEN (feste Pfeillänge 60 px, Betrag als Text)
+        // 5. EXTERNE LASTPFEILE
         // -----------------------------------------------------------------
         foreach (var load in _truss.Loads)
         {
@@ -178,13 +179,27 @@ public partial class MainWindow : Window
         }
 
         // -----------------------------------------------------------------
-        // 6. HORIZONTALE DIN-406-MASSKETTE (Gesamtlänge, aus der Vorlage)
+        // 6. HORIZONTALE DIN-406 MASSKETTE (Gesamtlänge)
         // -----------------------------------------------------------------
         var leftNode = _truss.Nodes.OrderBy(n => n.X).First();
         var rightNode = _truss.Nodes.OrderByDescending(n => n.X).First();
-        Point pLeft = _transform.WorldToScreen(leftNode.X, 0.0);
-        Point pRight = _transform.WorldToScreen(rightNode.X, 0.0);
-        double dimY = Math.Max(pLeft.Y, pRight.Y) + 35.0;   // 35 px unterhalb des Tragwerks
+
+        // FIX 1: Nicht 0.0, sondern die tatsächliche Unterkante yMin des Modells verwenden:
+        Point pLeft = _transform.WorldToScreen(leftNode.X, yMin);
+        Point pRight = _transform.WorldToScreen(rightNode.X, yMin);
+
+        // FIX 2: Dynamische Y-Position:
+        // Liegt 35 px unter den Auflagern/Unterkante, wird aber begrenzt,
+        // damit sie niemals aus dem unteren Canvas-Bereich herausrutscht:
+        double dimY = Math.Max(pLeft.Y, pRight.Y) + 35.0;
+
+        // Sicherheits-Clamp gegen Abschneiden am unteren Fensterrand:
+        double maxAllowedY = TrussCanvas.ActualHeight - 15.0;
+        if (dimY > maxAllowedY)
+        {
+            dimY = maxAllowedY;
+        }
+
         double totalLength = rightNode.X - leftNode.X;
 
         VectorArrow.AddHorizontalDimensionLine(
@@ -192,9 +207,7 @@ public partial class MainWindow : Window
             $"{totalLength:F2} m");
 
         // -----------------------------------------------------------------
-        // 7. VERTIKALE DIN-406-MASSKETTE (AUFGABE 3): Gesamthöhe links neben dem Tragwerk
-        //    Messpunkte: unterster und oberster Punkt der Bounding Box, x-Position des linken Knotens.
-        //    Die Maßlinie liegt 35 px links davon.
+        // 7. VERTIKALE DIN-406 MASSKETTE (Stufe A, Aufgabe 3: Gesamthöhe)
         // -----------------------------------------------------------------
         Point pBottomLeft = _transform.WorldToScreen(leftNode.X, yMin);
         Point pTopLeft = _transform.WorldToScreen(leftNode.X, yMax);
@@ -205,16 +218,11 @@ public partial class MainWindow : Window
             $"{heightTotal:F2} m");
     }
 
-    /// <summary>
-    /// Zeichnet ein Auflagersymbol (Dreieck) unter dem Knoten.
-    /// Loselager bekommt zusätzlich eine Rollenlinie.
-    /// </summary>
     private void DrawSupportSymbol(Point pos, bool isFixed)
     {
-        double h = 18.0;   // Höhe des Dreiecks [px]
-        double w = 14.0;   // Breite des Dreiecks [px]
+        double h = 18.0;
+        double w = 14.0;
 
-        // Spitze des Dreiecks liegt auf dem Knoten
         var triangle = new Polygon
         {
             Points = new PointCollection
@@ -223,50 +231,38 @@ public partial class MainWindow : Window
                 new Point(pos.X - w / 2, pos.Y + h),
                 new Point(pos.X + w / 2, pos.Y + h)
             },
-            Stroke = Brushes.Orange,
-            Fill = new SolidColorBrush(Color.FromArgb(80, 255, 165, 0)),
+            Stroke = SupportStroke,
+            Fill = SupportFill,
             StrokeThickness = 1.5
         };
         TrussCanvas.Children.Add(triangle);
 
         if (!isFixed)
         {
-            // Loselager: Linie unter dem Dreieck als Rollensymbol
             var rollerLine = new Line
             {
                 X1 = pos.X - w / 2 - 2,
                 Y1 = pos.Y + h + 3,
                 X2 = pos.X + w / 2 + 2,
                 Y2 = pos.Y + h + 3,
-                Stroke = Brushes.Orange,
+                Stroke = SupportStroke,
                 StrokeThickness = 1.5
             };
             TrussCanvas.Children.Add(rollerLine);
         }
     }
 
-    // =====================================================================
-    // EVENT-HANDLER
-    // =====================================================================
-
-    /// <summary>
-    /// Fenstergröße geändert -> neu zeichnen (Auto-Fit passt Maßstab und Zentrierung an).
-    /// </summary>
     private void TrussCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         Redraw();
     }
 
-    /// <summary>
-    /// Linke Maustaste gedrückt: Knoten in der Nähe des Cursors greifen (Hit-Test, 20 px Radius).
-    /// </summary>
     private void TrussCanvas_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.LeftButton != MouseButtonState.Pressed) return;
 
         Point mousePos = e.GetPosition(TrussCanvas);
 
-        // Ersten Knoten innerhalb von 20 Pixeln um den Mauszeiger finden
         _draggedNode = _truss.Nodes.FirstOrDefault(n =>
         {
             Point pScreen = _transform.WorldToScreen(n.X, n.Y);
@@ -276,27 +272,19 @@ public partial class MainWindow : Window
 
         if (_draggedNode != null)
         {
-            // Maus "fangen": MouseMove/MouseUp kommen auch dann an,
-            // wenn der Cursor den Canvas verlässt
             TrussCanvas.CaptureMouse();
             TxtInfo.Text = $"Ziehe Knoten {_draggedNode.Name}...";
         }
     }
 
-    /// <summary>
-    /// Maus bewegt: Wenn ein Knoten gegriffen ist, Mausposition in Weltkoordinaten umrechnen
-    /// und den Knoten dorthin setzen.
-    /// </summary>
     private void TrussCanvas_MouseMove(object sender, MouseEventArgs e)
     {
         if (_draggedNode == null) return;
 
         Point mousePos = e.GetPosition(TrussCanvas);
-
-        // Bildschirm [px] -> Welt [m] (mit der EINGEFRORENEN Transformation)
         var (worldX, worldY) = _transform.ScreenToWorld(mousePos.X, mousePos.Y);
 
-        // AUFGABE 4: Millimeter-Auflösung (3 Nachkommastellen in Metern)
+        // Stufe A, Aufgabe 4: Millimeter-Auflösung (3 Dezimalstellen)
         _draggedNode.X = Math.Round(worldX, 3);
         _draggedNode.Y = Math.Round(worldY, 3);
 
@@ -304,10 +292,6 @@ public partial class MainWindow : Window
         Redraw();
     }
 
-    /// <summary>
-    /// Maustaste losgelassen: Drag beenden. Da _draggedNode jetzt null ist, führt Redraw()
-    /// wieder Transform2D.Update() aus -> Auto-Fit auf die neue Bounding Box.
-    /// </summary>
     private void TrussCanvas_MouseUp(object sender, MouseButtonEventArgs e)
     {
         if (_draggedNode != null)
@@ -315,13 +299,10 @@ public partial class MainWindow : Window
             _draggedNode = null;
             TrussCanvas.ReleaseMouseCapture();
             TxtInfo.Text = "Knoten platziert. Auto-Fit aktiv.";
-            Redraw();
+            Redraw(); // Erst jetzt wird Auto-Fit auf die neuen Abmessungen berechnet
         }
     }
 
-    /// <summary>
-    /// Modellwahl in der ComboBox geändert.
-    /// </summary>
     private void CmbModelSelection_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (CmbModelSelection == null) return;
@@ -333,9 +314,6 @@ public partial class MainWindow : Window
         Redraw();
     }
 
-    /// <summary>
-    /// Reset: aktuelles Modell in den Ausgangszustand zurücksetzen.
-    /// </summary>
     private void BtnReset_Click(object sender, RoutedEventArgs e)
     {
         _truss = CmbModelSelection.SelectedIndex == 1

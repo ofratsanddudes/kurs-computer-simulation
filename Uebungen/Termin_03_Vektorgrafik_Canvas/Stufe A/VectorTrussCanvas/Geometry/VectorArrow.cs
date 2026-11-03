@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -11,19 +12,29 @@ namespace VectorTrussCanvas.Geometry;
 /// </summary>
 public static class VectorArrow
 {
+    private static readonly Brush DefaultArrowBrush;
+    private static readonly Brush DefaultDimBrush;
+
+    static VectorArrow()
+    {
+        // Freeze-Doktrin: Pinsel einfrieren zur Vermeidung von GC-Allokationen
+        var red = new SolidColorBrush(Colors.Red);
+        red.Freeze();
+        DefaultArrowBrush = red;
+
+        var gray = new SolidColorBrush(Colors.LightGray);
+        gray.Freeze();
+        DefaultDimBrush = gray;
+    }
+
     // =====================================================================
-    // KRAFTPFEIL (aus der Vorlage, unverändert)
+    // KRAFTPFEIL (mit analytischer Pfeilspitzenberechnung)
     // =====================================================================
 
     /// <summary>
     /// Zeichnet einen Kraftpfeil: Schaft (Line) + geschlossene Spitze (Polygon) + Beschriftung.
-    ///
-    /// Wichtig: Der Pfeil hat eine FESTE Länge in Pixeln (lengthPx) und eine FESTE Spitzengröße (14 px).
-    /// Der Kraftbetrag wird nur als Text angezeigt. So bleibt die Spitze bei jeder Last gleich groß.
+    /// Der Pfeil hat eine feste Länge in Pixeln (lengthPx) und eine feste Spitzengröße (14 px).
     /// </summary>
-    /// <param name="startPos">Angriffspunkt der Kraft (Screen-Koordinaten)</param>
-    /// <param name="fx">Kraftkomponente in X [kN] (Welt, positiv nach rechts)</param>
-    /// <param name="fy">Kraftkomponente in Y [kN] (Welt, positiv nach OBEN)</param>
     public static void AddForceArrow(
         Canvas canvas,
         Point startPos,
@@ -32,22 +43,19 @@ public static class VectorArrow
         double lengthPx = 65.0,
         Brush? arrowColor = null)
     {
-        arrowColor ??= Brushes.Red;
+        arrowColor ??= DefaultArrowBrush;
 
-        // Betrag der Kraft; bei (fast) Null wird nichts gezeichnet
         double norm = Math.Sqrt(fx * fx + fy * fy);
         if (norm < 1e-6)
             return;
 
-        // Einheitsvektor der Richtung auf dem BILDSCHIRM.
-        // Y-Invertierung: Fy nach oben (Welt) entspricht -y auf dem Canvas.
+        // Einheitsvektor im Bildschirmsystem (Y-Invertierung: Fy nach oben entspricht -y auf Canvas)
         double ux = fx / norm;
         double uy = -fy / norm;
 
-        // Spitze liegt lengthPx Pixel vom Angriffspunkt entfernt
         Point tipPos = new Point(startPos.X + ux * lengthPx, startPos.Y + uy * lengthPx);
 
-        // 1) Schaft als Linie
+        // 1. Schaft als Linie
         var shaft = new Line
         {
             X1 = startPos.X,
@@ -59,11 +67,7 @@ public static class VectorArrow
         };
         canvas.Children.Add(shaft);
 
-        // 2) Pfeilspitze über Drehmatrix:
-        //    phi     = Richtungswinkel des Pfeils (im Bildschirmsystem)
-        //    beta    = Halbwinkel der Spitze (15 Grad)
-        //    p_left  = tip - L * (cos(phi - beta), sin(phi - beta))
-        //    p_right = tip - L * (cos(phi + beta), sin(phi + beta))
+        // 2. Pfeilspitze über Drehmatrix (Länge 14 px, Halbwinkel 15°)
         double lTip = 14.0;
         double beta = 15.0 * Math.PI / 180.0;
         double phi = Math.Atan2(uy, ux);
@@ -85,7 +89,7 @@ public static class VectorArrow
         };
         canvas.Children.Add(head);
 
-        // 3) Beschriftung (Kraftbetrag) hinter der Spitze
+        // 3. Beschriftung (Kraftbetrag) hinter der Spitze
         var label = new TextBlock
         {
             Text = $"{norm:F1} kN",
@@ -99,19 +103,16 @@ public static class VectorArrow
     }
 
     // =====================================================================
-    // HORIZONTALE MASSKETTE (aus der Vorlage, unverändert)
+    // HORIZONTALE MASSKETTE (DIN 406)
     // =====================================================================
 
     /// <summary>
     /// Horizontale Bemaßung nach DIN 406:
-    ///   1. zwei Maßhilfslinien (gestrichelt, senkrecht von den Knoten nach unten)
-    ///   2. eine waagerechte Maßlinie
-    ///   3. zwei Maßpfeile an den Enden der Maßlinie
-    ///   4. Maßzahl mittig über der Maßlinie
+    /// 1. zwei Maßhilfslinien (senkrecht von den Knoten nach unten mit Überstand)
+    /// 2. eine waagerechte Maßlinie
+    /// 3. zwei schlanke Maßpfeile
+    /// 4. Maßzahl mittig über der Maßlinie
     /// </summary>
-    /// <param name="p1">Linker Messpunkt (Screen)</param>
-    /// <param name="p2">Rechter Messpunkt (Screen)</param>
-    /// <param name="yScreen">Y-Position der Maßlinie (Screen)</param>
     public static void AddHorizontalDimensionLine(
         Canvas canvas,
         Point p1,
@@ -120,10 +121,9 @@ public static class VectorArrow
         string dimensionText,
         Brush? strokeColor = null)
     {
-        strokeColor ??= Brushes.LightGray;
+        strokeColor ??= DefaultDimBrush;
 
-        // 1. Maßhilfslinien: starten 4 px unter dem Knoten (Sicherheitsabstand)
-        //    und ragen 6 px über die Maßlinie hinaus (Überstand)
+        // 1. Maßhilfslinien (senkrecht)
         canvas.Children.Add(new Line
         {
             X1 = p1.X,
@@ -146,7 +146,7 @@ public static class VectorArrow
             StrokeDashArray = new DoubleCollection { 2, 2 }
         });
 
-        // 2. Maßlinie (durchgezogen, etwas dicker)
+        // 2. Waagerechte Maßlinie
         canvas.Children.Add(new Line
         {
             X1 = p1.X,
@@ -157,11 +157,11 @@ public static class VectorArrow
             StrokeThickness = 1.2
         });
 
-        // 3. Schlanke Maßpfeile (Länge 10 px, Breite 2 * 3 px, Verhältnis ca. 1:3)
+        // 3. Schlanke Maßpfeile links und rechts
         double arrowLen = 10.0;
         double arrowH = 3.0;
 
-        // Linker Pfeil: Spitze bei p1, Basis 10 px weiter rechts
+        // Pfeil links (zeigt nach links zu p1)
         canvas.Children.Add(new Polygon
         {
             Points = new PointCollection
@@ -173,7 +173,7 @@ public static class VectorArrow
             Fill = strokeColor
         });
 
-        // Rechter Pfeil: Spitze bei p2, Basis 10 px weiter links
+        // Pfeil rechts (zeigt nach rechts zu p2)
         canvas.Children.Add(new Polygon
         {
             Points = new PointCollection
@@ -185,8 +185,7 @@ public static class VectorArrow
             Fill = strokeColor
         });
 
-        // 4. Maßzahl mittig über der Maßlinie.
-        //    Measure() liefert die tatsächliche Textbreite, damit exakt zentriert werden kann.
+        // 4. Maßzahl mittig über der Maßlinie
         var textBlock = new TextBlock
         {
             Text = dimensionText,
@@ -203,19 +202,16 @@ public static class VectorArrow
     }
 
     // =====================================================================
-    // VERTIKALE MASSKETTE (NEU: Stufe A, Aufgabe 3)
+    // VERTIKALE MASSKETTE (DIN 406 - Stufe A, Aufgabe 3)
     // =====================================================================
 
     /// <summary>
-    /// Vertikale Bemaßung nach DIN 406. Entspricht der horizontalen Methode mit vertauschten Achsen:
-    ///   1. zwei WAAGERECHTE, gestrichelte Maßhilfslinien (vom Knoten nach links)
-    ///   2. eine SENKRECHTE Maßlinie
-    ///   3. Maßpfeile oben und unten (Polygon)
-    ///   4. Maßzahl mittig neben der Maßlinie, um 90 Grad gedreht
+    /// Vertikale Bemaßung nach DIN 406:
+    /// 1. zwei waagerechte Maßhilfslinien (mit Überstand nach links)
+    /// 2. eine senkrechte Maßlinie bei xScreen
+    /// 3. Maßpfeile oben und unten (Polygon)
+    /// 4. Maßzahl zentriert links neben der Maßlinie
     /// </summary>
-    /// <param name="pBottom">Unterer Messpunkt (Screen, größerer Y-Wert)</param>
-    /// <param name="pTop">Oberer Messpunkt (Screen, kleinerer Y-Wert)</param>
-    /// <param name="xScreen">X-Position der senkrechten Maßlinie (Screen)</param>
     public static void AddVerticalDimensionLine(
         Canvas canvas,
         Point pBottom,
@@ -224,10 +220,9 @@ public static class VectorArrow
         string dimensionText,
         Brush? strokeColor = null)
     {
-        strokeColor ??= Brushes.LightGray;
+        strokeColor ??= DefaultDimBrush;
 
-        // 1. Maßhilfslinien: starten 4 px links vom Knoten (Sicherheitsabstand)
-        //    und ragen 6 px über die Maßlinie nach links hinaus (Überstand)
+        // 1. Waagerechte Maßhilfslinien: Start am Knoten, Ende 6 px links über der Maßlinie
         canvas.Children.Add(new Line
         {
             X1 = pBottom.X - 4,
@@ -250,7 +245,7 @@ public static class VectorArrow
             StrokeDashArray = new DoubleCollection { 2, 2 }
         });
 
-        // 2. Senkrechte Maßlinie zwischen den beiden Hilfslinien
+        // 2. Senkrechte Maßlinie
         canvas.Children.Add(new Line
         {
             X1 = xScreen,
@@ -261,36 +256,35 @@ public static class VectorArrow
             StrokeThickness = 1.2
         });
 
-        // 3. Maßpfeile (Länge 10 px, Breite 2 * 3 px)
+        // 3. Maßpfeile oben und unten
         double arrowLen = 10.0;
-        double arrowH = 3.0;
+        double arrowW = 3.0;
 
-        // Unterer Pfeil: Spitze bei pBottom, Basis 10 px weiter OBEN
-        // (Y wächst nach unten, also "weiter oben" = kleinerer Y-Wert)
+        // Unterer Pfeil: Spitze unten bei pBottom.Y, Basis weiter oben (kleineres Y)
         canvas.Children.Add(new Polygon
         {
             Points = new PointCollection
             {
                 new Point(xScreen, pBottom.Y),
-                new Point(xScreen - arrowH, pBottom.Y - arrowLen),
-                new Point(xScreen + arrowH, pBottom.Y - arrowLen)
+                new Point(xScreen - arrowW, pBottom.Y - arrowLen),
+                new Point(xScreen + arrowW, pBottom.Y - arrowLen)
             },
             Fill = strokeColor
         });
 
-        // Oberer Pfeil: Spitze bei pTop, Basis 10 px weiter UNTEN
+        // Oberer Pfeil: Spitze oben bei pTop.Y, Basis weiter unten (größeres Y)
         canvas.Children.Add(new Polygon
         {
             Points = new PointCollection
             {
                 new Point(xScreen, pTop.Y),
-                new Point(xScreen - arrowH, pTop.Y + arrowLen),
-                new Point(xScreen + arrowH, pTop.Y + arrowLen)
+                new Point(xScreen - arrowW, pTop.Y + arrowLen),
+                new Point(xScreen + arrowW, pTop.Y + arrowLen)
             },
             Fill = strokeColor
         });
 
-        // 4. Maßzahl: mittig, um -90 Grad gedreht (lesbar von links) links neben der Maßlinie.
+        // 4. Maßzahl mittig links neben der senkrechten Maßlinie
         var textBlock = new TextBlock
         {
             Text = dimensionText,
@@ -299,22 +293,11 @@ public static class VectorArrow
             FontWeight = FontWeights.Normal
         };
         textBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        double textW = textBlock.DesiredSize.Width;   // Breite VOR der Drehung
-        double textH = textBlock.DesiredSize.Height;  // Höhe VOR der Drehung
+        double textW = textBlock.DesiredSize.Width;
+        double textH = textBlock.DesiredSize.Height;
 
-        double yMid = (pBottom.Y + pTop.Y) / 2.0;
-
-        // Drehung um die Mitte des Textblocks (0.5 / 0.5 = Mittelpunkt)
-        textBlock.RenderTransformOrigin = new Point(0.5, 0.5);
-        textBlock.RenderTransform = new RotateTransform(-90);
-
-        // Nach der Drehung ist der Text optisch textH breit und textW hoch.
-        // Canvas.SetLeft/Top beziehen sich auf den UNGEDREHTEN Block, daher die Korrektur:
-        //   rechter Rand des gedrehten Textes = xScreen - 8
-        //   Mitte des gedrehten Textes        = xScreen - 8 - textH/2
-        //   linke Kante des ungedrehten Blocks = Mitte - textW/2
-        Canvas.SetLeft(textBlock, xScreen - 8 - textH / 2.0 - textW / 2.0);
-        Canvas.SetTop(textBlock, yMid - textH / 2.0);
+        Canvas.SetLeft(textBlock, xScreen - textW - 5.0);
+        Canvas.SetTop(textBlock, (pBottom.Y + pTop.Y) / 2.0 - textH / 2.0);
         canvas.Children.Add(textBlock);
     }
 }
