@@ -1,8 +1,10 @@
+using System;
 using System.IO;
+using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
-using System.Windows.Controls;
 using VectorTrussCanvas.Geometry;
 using VectorTrussCanvas.Models;
 using VectorTrussCanvas.Rendering;
@@ -15,24 +17,18 @@ namespace VectorTrussCanvas;
 /// </summary>
 public partial class MainWindow : Window
 {
-    // ---------------------------------------------------------------
-    // Zustand
-    // ---------------------------------------------------------------
-    private TrussGeometry _truss;                          // Datenmodell
-    private readonly Transform2D _transform = new();       // Welt <-> Bildschirm inkl. Kamera
+    private TrussGeometry _truss;
+    private readonly Transform2D _transform = new();
 
-    private TrussNode? _draggedNode = null;                // wird gerade gezogen (Jitter-Fix-Schalter)
-    private TrussNode? _selectedNode = null;               // für den Lastvektor-Editor
+    private TrussNode? _draggedNode = null;
+    private TrussNode? _selectedNode = null;
 
-    private bool _isPanning = false;                       // Kamera-Verschieben aktiv?
-    private Point _lastMousePos;                           // letzte Mausposition beim Panning
+    private bool _isPanning = false;
+    private Point _lastMousePos;
 
-    private bool _suppressLoadEvents = false;              // verhindert Rückkopplung, wenn Slider per Code gesetzt werden
+    private bool _suppressLoadEvents = false;
 
-    // Zoomschritt pro Mausrad-Raste (+15 % bzw. -13 %)
     private const double ZoomStep = 1.15;
-
-    // Greifradius für Knoten in Pixeln
     private const double HitRadiusPx = 20.0;
 
     public MainWindow()
@@ -46,10 +42,6 @@ public partial class MainWindow : Window
     // ZEICHNEN
     // =====================================================================
 
-    /// <summary>
-    /// Zeichnet neu. Auto-Fit wird nur aktualisiert, wenn gerade KEIN Knoten gezogen wird
-    /// (Jitter-Fix: sonst würde die wachsende Bounding Box den Maßstab unter dem Cursor ändern).
-    /// </summary>
     private void Redraw()
     {
         if (TrussCanvas == null || TrussCanvas.ActualWidth < 10 || TrussCanvas.ActualHeight < 10)
@@ -58,7 +50,6 @@ public partial class MainWindow : Window
         if (_draggedNode == null)
         {
             var (xMin, xMax, yMin, yMax) = _truss.GetBounds();
-            // Größerer Rand, damit Maßketten und Lasten im Fenster Platz haben
             _transform.MarginX = 90.0;
             _transform.MarginY = 90.0;
             _transform.Update(xMin, xMax, yMin, yMax, TrussCanvas.ActualWidth, TrussCanvas.ActualHeight);
@@ -68,7 +59,7 @@ public partial class MainWindow : Window
     }
 
     // =====================================================================
-    // MODELLWAHL
+    // MODELLWAHL (Sprint-Dreieck, Pratt-Träger oder Hallen-Auslegerkran)
     // =====================================================================
 
     private TrussGeometry CreateSelectedModel() => CmbModelSelection.SelectedIndex switch
@@ -78,9 +69,6 @@ public partial class MainWindow : Window
         _ => TrussGeometry.CreateSprintTriangle()
     };
 
-    /// <summary>
-    /// Übernimmt ein neues Modell: Auswahl, Drag und Kamera zurücksetzen.
-    /// </summary>
     private void ApplyModel(TrussGeometry model)
     {
         _truss = model;
@@ -93,7 +81,6 @@ public partial class MainWindow : Window
 
     private void CmbModelSelection_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        // Beim Start (InitializeComponent) feuert das Event, bevor alle Controls existieren
         if (!IsLoaded) return;
 
         ApplyModel(CreateSelectedModel());
@@ -119,12 +106,12 @@ public partial class MainWindow : Window
     {
         Point mousePos = e.GetPosition(TrussCanvas);
 
-        // Rechte oder mittlere Taste: Kamera verschieben
+        // Rechte oder mittlere Taste: Kamera verschieben (Pan)
         if (e.ChangedButton == MouseButton.Right || e.ChangedButton == MouseButton.Middle)
         {
             _isPanning = true;
             _lastMousePos = mousePos;
-            TrussCanvas.CaptureMouse();          // Maus "fangen", damit schnelle Bewegungen nicht abreißen
+            TrussCanvas.CaptureMouse();
             TrussCanvas.Cursor = Cursors.SizeAll;
             return;
         }
@@ -139,7 +126,6 @@ public partial class MainWindow : Window
             .Select(x => x.Node)
             .FirstOrDefault();
 
-        // Auswahl für den Lastvektor-Editor (Klick ins Leere hebt die Auswahl auf)
         _selectedNode = hit;
         UpdateLoadEditor();
 
@@ -157,7 +143,7 @@ public partial class MainWindow : Window
     {
         Point mousePos = e.GetPosition(TrussCanvas);
 
-        // --- Kamera verschieben ---
+        // Kamera verschieben
         if (_isPanning)
         {
             Vector delta = mousePos - _lastMousePos;
@@ -167,13 +153,12 @@ public partial class MainWindow : Window
             return;
         }
 
-        // --- Knoten ziehen ---
+        // Knoten ziehen
         if (_draggedNode == null) return;
 
-        // Bildschirm -> Welt (berücksichtigt Zoom und Pan; Auto-Fit ist während des Drags eingefroren)
         var (worldX, worldY) = _transform.ScreenToWorld(mousePos.X, mousePos.Y);
 
-        _draggedNode.X = Math.Round(worldX, 3);   // Millimeter-Auflösung
+        _draggedNode.X = Math.Round(worldX, 3);
         _draggedNode.Y = Math.Round(worldY, 3);
 
         TxtInfo.Text = $"Knoten {_draggedNode.Name}: X = {_draggedNode.X:F3} m | Y = {_draggedNode.Y:F3} m";
@@ -193,7 +178,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Dragging beenden: erst jetzt darf Auto-Fit wieder nachgeführt werden
+        // Dragging beenden
         if (_draggedNode != null && e.ChangedButton == MouseButton.Left)
         {
             _draggedNode = null;
@@ -203,10 +188,6 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// Mausrad: Zoom um den Mauszeiger. Die Mausposition wird relativ zum Canvas gelesen
-    /// und passt direkt zu Transform2D (der Canvas selbst wird nicht transformiert).
-    /// </summary>
     private void TrussCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
     {
         Point mousePos = e.GetPosition(TrussCanvas);
@@ -231,12 +212,8 @@ public partial class MainWindow : Window
 
     private TrussLoad? FindLoad(TrussNode node) => _truss.Loads.FirstOrDefault(l => l.NodeId == node.Id);
 
-    /// <summary>
-    /// Synchronisiert Seitenleiste und Auswahl (Slider-Werte, Beschriftungen, Aktivierung).
-    /// </summary>
     private void UpdateLoadEditor()
     {
-        // Slider per Code setzen löst ValueChanged aus -> Rückkopplung verhindern
         _suppressLoadEvents = true;
 
         if (_selectedNode == null)
@@ -269,10 +246,6 @@ public partial class MainWindow : Window
         TxtSelectedNode.Text = $"Knoten {_selectedNode.Name}  ({_selectedNode.X:F3} ; {_selectedNode.Y:F3}) m";
     }
 
-    /// <summary>
-    /// Zeigt Fx, Fy, Betrag und Richtungswinkel an:
-    ///   |F| = sqrt(Fx^2 + Fy^2),   phi = atan2(Fy, Fx)
-    /// </summary>
     private void UpdateLoadInfoText()
     {
         double fx = _selectedNode != null ? SldFx.Value : 0.0;
@@ -289,14 +262,11 @@ public partial class MainWindow : Window
         }
 
         double phiDeg = Math.Atan2(fy, fx) * 180.0 / Math.PI;
-        if (phiDeg < 0) phiDeg += 360.0;   // Winkel in [0, 360)
+        if (phiDeg < 0) phiDeg += 360.0;
 
         TxtLoadInfo.Text = $"|F| = {magnitude:F1} kN   φ = {phiDeg:F1}°";
     }
 
-    /// <summary>
-    /// Slider geändert: Last am ausgewählten Knoten live anlegen, ändern oder (bei 0/0) entfernen.
-    /// </summary>
     private void LoadSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (!IsLoaded || _suppressLoadEvents || _selectedNode == null) return;

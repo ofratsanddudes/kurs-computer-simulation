@@ -137,7 +137,7 @@ public static class TrussRenderer
     }
 
     // =====================================================================
-    // KNOTEN (mit Millimeter-Auflösung :F3)
+    // KNOTEN
     // =====================================================================
     private static void DrawNodes(Canvas canvas, TrussGeometry truss, Transform2D t, TrussNode? selectedNode)
     {
@@ -161,10 +161,10 @@ public static class TrussRenderer
             Canvas.SetTop(ellipse, pos.Y - radius);
             canvas.Children.Add(ellipse);
 
-            // Korrektur auf Millimeter-Auflösung :F3
+            // Kompakte Anzeige :F1 verhindert Textüberlappungen im Modell
             var label = new TextBlock
             {
-                Text = $"{node.Name} ({node.X:F3}; {node.Y:F3})",
+                Text = $"{node.Name} ({node.X:F1}; {node.Y:F1})",
                 Foreground = RenderStyles.NodeLabel,
                 FontSize = 10,
                 FontWeight = FontWeights.SemiBold
@@ -193,7 +193,7 @@ public static class TrussRenderer
     }
 
     // =====================================================================
-    // DIN-406-BEMASSUNGSKETTEN (zweistufig horizontal & vertikal)
+    // DIN-406-BEMASSUNGSKETTEN
     // =====================================================================
     private static void DrawDimensionChains(Canvas canvas, TrussGeometry truss, Transform2D t)
     {
@@ -201,25 +201,25 @@ public static class TrussRenderer
 
         var (xMin, xMax, yMin, yMax) = truss.GetBounds();
 
-        // Basis-Y für die Maßketten: immer unterhalb des tiefsten Punktes aller Knoten
         double bottomScreenY = t.WorldToScreen(0.0, yMin).Y;
 
         // ---------- HORIZONTAL ----------
-        // 1. Untergurt-Knoten ermitteln:
-        // Haben wir Untergurt-Knoten (Name fängt mit 'U' an)? Wenn ja, nimm diese (topologisch stabil!),
-        // andernfalls nimm Knoten nahe der unteren Hälfte sortiert nach X.
+        // 1. Primär: Knoten, die mit 'U' beginnen (Untergurt bei Pratt & Kran)
         var namedBottomNodes = truss.Nodes
             .Where(n => n.Name.StartsWith("U", StringComparison.OrdinalIgnoreCase))
             .OrderBy(n => n.X)
             .ToList();
 
+        // 2. Fallback: Bei Modellen ohne 'U' (Sprint-Dreieck K1..K3 oder neutrale JSONs)
+        // werden nur Knoten auf der tatsächlichen Unterkante yMin herangezogen.
         var bottomNodes = namedBottomNodes.Count >= 2
             ? namedBottomNodes
-            : truss.Nodes.OrderBy(n => n.X).ToList();
+            : truss.Nodes.Where(n => Math.Abs(n.Y - yMin) < 1e-3).OrderBy(n => n.X).ToList();
 
+        // Innere Kette existiert nur bei mindestens 3 echten Untergurtknoten
         bool hasSubDimensions = bottomNodes.Count >= 3;
 
-        // Stufe 1 (Innere Kette bei +30 px): Bemaßung aller Abschnitte (keiner verschwindet mehr!)
+        // Stufe 1 (Innere Kette bei +30 px): Teilabschnitte
         if (hasSubDimensions)
         {
             double innerY = bottomScreenY + DimInnerOffset;
@@ -252,7 +252,6 @@ public static class TrussRenderer
             RenderStyles.Dimension);
 
         // ---------- VERTIKAL ----------
-        // Linke Außenkante (Kran-Mast bzw. linke Stütze)
         var leftEdgeNodes = truss.Nodes
             .Where(n => Math.Abs(n.X - xMin) < 1e-2)
             .OrderBy(n => n.Y)
@@ -264,7 +263,7 @@ public static class TrussRenderer
 
         bool hasIntermediateHeights = leftEdgeNodes.Count > 2;
 
-        // Zwischenhöhen am Mast
+        // Zwischenhöhen
         if (hasIntermediateHeights)
         {
             for (int i = 0; i < leftEdgeNodes.Count - 1; i++)
@@ -282,7 +281,7 @@ public static class TrussRenderer
             }
         }
 
-        // Gesamthöhe
+        // Gesamthöhe links
         double totalX = hasIntermediateHeights
             ? leftX - DimVerticalOffset - DimVerticalStep
             : leftX - DimVerticalOffset;

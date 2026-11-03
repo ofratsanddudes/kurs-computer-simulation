@@ -178,7 +178,7 @@ public static class VectorArrow
     }
 
     // =====================================================================
-    // VERTIKALE MASSKETTE (DIN 406 - Stufe B Track A)
+    // VERTIKALE MASSKETTE (DIN 406: Maßzahl gedreht, lesbar von rechts)
     // =====================================================================
 
     public static void AddVerticalDimensionLine(
@@ -191,7 +191,7 @@ public static class VectorArrow
     {
         strokeColor ??= Brushes.LightGray;
 
-        // 1. Waagerechte Maßhilfslinien: vom Knoten bis 6 px links über die Maßlinie hinaus
+        // 1. Waagerechte Maßhilfslinien: vom Bezugspunkt bis 6 px links über die Maßlinie hinaus
         canvas.Children.Add(new Line
         {
             X1 = pBottom.X - 4,
@@ -225,7 +225,7 @@ public static class VectorArrow
             StrokeThickness = 1.2
         });
 
-        // 3. Maßpfeile oben und unten (Polygon)
+        // 3. Schlanke Maßpfeile oben und unten (Polygon)
         double arrowLen = 10.0;
         double arrowW = 3.0;
 
@@ -253,7 +253,7 @@ public static class VectorArrow
             Fill = strokeColor
         });
 
-        // 4. Maßzahl zentriert links neben der senkrechten Maßlinie (ohne risikobehaftete Rotation)
+        // 4. Maßzahl nach DIN 406: um -90 Grad gedreht (von rechts lesbar)
         var textBlock = new TextBlock
         {
             Text = dimensionText,
@@ -265,8 +265,14 @@ public static class VectorArrow
         double textW = textBlock.DesiredSize.Width;
         double textH = textBlock.DesiredSize.Height;
 
-        Canvas.SetLeft(textBlock, xScreen - textW - 5.0);
-        Canvas.SetTop(textBlock, (pBottom.Y + pTop.Y) / 2.0 - textH / 2.0);
+        double yMid = (pBottom.Y + pTop.Y) / 2.0;
+
+        textBlock.RenderTransformOrigin = new Point(0.5, 0.5);
+        textBlock.RenderTransform = new RotateTransform(-90);
+
+        // Exakte Ausrichtung: 6 px links der Maßlinie
+        Canvas.SetLeft(textBlock, xScreen - 6.0 - textH / 2.0 - textW / 2.0);
+        Canvas.SetTop(textBlock, yMid - textH / 2.0);
         canvas.Children.Add(textBlock);
     }
 }

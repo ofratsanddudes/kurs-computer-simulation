@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace VectorTrussCanvas.Models;
 
 /// <summary>
@@ -7,10 +11,10 @@ public class TrussNode
 {
     public int Id { get; set; }
     public string Name { get; set; }
-    public double X { get; set; }                  // [m]
-    public double Y { get; set; }                  // [m]
-    public bool IsFixedSupport { get; set; }       // Festlager?
-    public bool IsRollerSupport { get; set; }      // Loselager?
+    public double X { get; set; }
+    public double Y { get; set; }
+    public bool IsFixedSupport { get; set; }
+    public bool IsRollerSupport { get; set; }
 
     public TrussNode(int id, string name, double x, double y, bool isFixed = false, bool isRoller = false)
     {
@@ -24,9 +28,7 @@ public class TrussNode
 }
 
 /// <summary>
-/// Stab zwischen zwei Knoten. Es werden nur die Knoten-IDs gespeichert,
-/// die Koordinaten stehen in den Knoten selbst. Zieht man einen Knoten,
-/// bewegen sich dadurch automatisch alle angeschlossenen Stäbe mit.
+/// Stab zwischen zwei Knoten (topologische Verbindung über Knoten-IDs).
 /// </summary>
 public class TrussBar
 {
@@ -43,14 +45,13 @@ public class TrussBar
 }
 
 /// <summary>
-/// Äußere Kraft an einem Knoten in Kilonewton [kN].
-/// Fy positiv = nach oben, negativ = nach unten (Weltkoordinaten).
+/// Äußere Punktlast an einem Knoten in Kilonewton [kN].
 /// </summary>
 public class TrussLoad
 {
     public int NodeId { get; set; }
-    public double Fx { get; set; }   // [kN]
-    public double Fy { get; set; }   // [kN]
+    public double Fx { get; set; }
+    public double Fy { get; set; }
 
     public TrussLoad(int nodeId, double fx, double fy)
     {
@@ -61,8 +62,7 @@ public class TrussLoad
 }
 
 /// <summary>
-/// Gesamtes 2D-Fachwerkmodell (Knoten, Stäbe, Lasten).
-/// Rein geometrisch! Keine Steifigkeitsmatrix, keine Statik (kommt erst in Termin 07).
+/// Gesamtes 2D-Fachwerkmodell. Rein geometrische Datenhaltung ohne FEM-Statik.
 /// </summary>
 public class TrussGeometry
 {
@@ -71,12 +71,10 @@ public class TrussGeometry
     public List<TrussLoad> Loads { get; } = new();
 
     /// <summary>
-    /// Bounding Box aller Knoten: kleinstes achsenparalleles Rechteck um das Modell.
-    /// Rückgabe: (xMin, xMax, yMin, yMax) in Metern.
+    /// Berechnet die minimale achsenparallele Bounding Box aller Knoten [xMin, xMax, yMin, yMax] in Metern.
     /// </summary>
     public (double xMin, double xMax, double yMin, double yMax) GetBounds()
     {
-        // Leeres Modell: Standardbox, damit Transform2D nicht durch 0 teilt
         if (Nodes.Count == 0)
             return (0, 1, 0, 1);
 
@@ -85,7 +83,6 @@ public class TrussGeometry
         double yMin = Nodes.Min(n => n.Y);
         double yMax = Nodes.Max(n => n.Y);
 
-        // Mindestausdehnung 1 m, falls alle Knoten auf einer Linie liegen
         if (Math.Abs(xMax - xMin) < 1e-4) xMax = xMin + 1.0;
         if (Math.Abs(yMax - yMin) < 1e-4) yMax = yMin + 1.0;
 
@@ -93,8 +90,7 @@ public class TrussGeometry
     }
 
     /// <summary>
-    /// Sprint-Dreieck (Stufe A): K1 = (0, 0), K2 = (4, 0), K3 = (2, 2).
-    /// Festlager in K1, Loselager in K2, Last F = (0, -20 kN) an K3.
+    /// Sprint-Dreieck (Stufe A): 3 Knoten, 3 Stäbe.
     /// </summary>
     public static TrussGeometry CreateSprintTriangle()
     {
@@ -112,7 +108,7 @@ public class TrussGeometry
     }
 
     /// <summary>
-    /// Pratt-Träger (für Stufe B, Track A): 8 Knoten, 13 Stäbe, Spannweite 12 m, Höhe 2,5 m.
+    /// Pratt-Träger (Track A): 8 Knoten, 13 Stäbe, 12 m Spannweite, Höhe 2,5 m.
     /// </summary>
     public static TrussGeometry CreateIndustrialPrattTruss()
     {
@@ -151,7 +147,7 @@ public class TrussGeometry
         truss.Bars.Add(new TrussBar(12, 6, 3));
         truss.Bars.Add(new TrussBar(13, 3, 8));
 
-        // Lasten am Obergurt (je 35 kN nach unten)
+        // Lasten
         truss.Loads.Add(new TrussLoad(6, 0.0, -35.0));
         truss.Loads.Add(new TrussLoad(7, 0.0, -35.0));
 
@@ -161,7 +157,7 @@ public class TrussGeometry
     /// <summary>
     /// Auslegerkran-Träger (Track A, 3. Modell): 10 Knoten, 17 Stäbe, Spannweite 12 m.
     /// Asymmetrisch: Einspannung links (Wand), Obergurt fällt zur Spitze hin von 4,0 m auf 1,0 m ab.
-    /// Plausibilitätscheck für ein statisch bestimmtes Fachwerk: Stäbe = 2 * Knoten - 3 -> 2*10 - 3 = 17.
+    /// Plausibilitätscheck: b = 2*k - 3 = 2*10 - 3 = 17 Stäbe.
     /// </summary>
     public static TrussGeometry CreateCantileverCraneTruss()
     {
@@ -175,7 +171,7 @@ public class TrussGeometry
         truss.Nodes.Add(new TrussNode(5, "U5", 12.0, 0.0));                 // Auslegerspitze unten
 
         // Obergurt, fällt zur Spitze hin ab
-        truss.Nodes.Add(new TrussNode(6, "O1", 0.0, 4.0, isRoller: true));  // Loselager an der Wand
+        truss.Nodes.Add(new TrussNode(6, "O1", 0.0, 4.0, isRoller: true)); // Loselager an der Wand
         truss.Nodes.Add(new TrussNode(7, "O2", 3.0, 3.25));
         truss.Nodes.Add(new TrussNode(8, "O3", 6.0, 2.5));
         truss.Nodes.Add(new TrussNode(9, "O4", 9.0, 1.75));

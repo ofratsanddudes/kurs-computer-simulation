@@ -44,7 +44,7 @@
                 <ColumnDefinition Width="270"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Zeichenfläche. ClipToBounds schneidet herausgezoomte Elemente sauber ab. -->
+            <!-- Zeichenfläche (ClipToBounds schneidet herausgezoomte Elemente sauber ab) -->
             <Border Grid.Column="0" Background="#141414" CornerRadius="4" 
                     BorderBrush="#3F3F46" BorderThickness="1" ClipToBounds="True">
                 <Canvas x:Name="TrussCanvas" 
@@ -56,7 +56,7 @@
                         MouseWheel="TrussCanvas_MouseWheel"/>
             </Border>
 
-            <!-- Seitenleiste -->
+            <!-- Seitenleiste: Lastvektor-Editor, Kamera-Info & Datei-I/O -->
             <Border Grid.Column="1" Background="#2D2D30" CornerRadius="4" Padding="12" Margin="10,0,0,0">
                 <StackPanel>
 
@@ -85,7 +85,7 @@
 
                     <Separator Margin="0,14,0,14" Background="#3F3F46"/>
 
-                    <!-- Ansicht -->
+                    <!-- Ansicht & Steuerungshinweise -->
                     <TextBlock Text="Ansicht" FontSize="14" FontWeight="Bold" Foreground="White"/>
                     <TextBlock Text="Mausrad: Zoom am Mauszeiger&#x0A;Rechte/Mittlere Maustaste ziehen: Verschieben&#x0A;Linke Maustaste: Knoten wählen und ziehen" 
                                Foreground="#AAAAAA" FontSize="11" Margin="0,6,0,8" TextWrapping="Wrap"/>
@@ -93,7 +93,7 @@
 
                     <Separator Margin="0,14,0,14" Background="#3F3F46"/>
 
-                    <!-- JSON -->
+                    <!-- JSON Import / Export -->
                     <TextBlock Text="Datei" FontSize="14" FontWeight="Bold" Foreground="White"/>
                     <Button x:Name="BtnSaveJson" Content="JSON Speichern" Padding="8,4" Margin="0,8,0,6" Click="BtnSaveJson_Click"/>
                     <Button x:Name="BtnLoadJson" Content="JSON Laden" Padding="8,4" Click="BtnLoadJson_Click"/>

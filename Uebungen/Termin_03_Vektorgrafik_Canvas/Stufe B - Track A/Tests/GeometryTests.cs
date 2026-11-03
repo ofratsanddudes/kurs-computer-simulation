@@ -1,6 +1,8 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.IO;
+using System.Linq;
 using System.Windows;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VectorTrussCanvas.Geometry;
 using VectorTrussCanvas.Models;
 
@@ -20,7 +22,6 @@ public class GeometryTests
         transform.MarginX = 50.0;
         transform.MarginY = 50.0;
 
-        // Bounding Box: [0, 10] x [0, 5], Canvas: 800 x 600
         transform.Update(0.0, 10.0, 0.0, 5.0, 800.0, 600.0);
 
         double[] testX = [0.0, 2.5, 5.0, 7.33, 10.0];
@@ -45,7 +46,6 @@ public class GeometryTests
         var transform = new Transform2D();
         transform.MarginX = 50.0;
         transform.MarginY = 50.0;
-        // Asymmetrisches Fenster: 1000 x 400
         transform.Update(0.0, 4.0, 0.0, 4.0, 1000.0, 400.0);
 
         Point pOrigin = transform.WorldToScreen(0.0, 0.0);
@@ -55,7 +55,6 @@ public class GeometryTests
         double deltaScreenX = Math.Abs(pRight.X - pOrigin.X);
         double deltaScreenY = Math.Abs(pUp.Y - pOrigin.Y);
 
-        // Bei isotroper Skalierung MÜSSEN 1 Meter in X und 1 Meter in Y exakt gleich vielen Pixeln entsprechen!
         Assert.AreEqual(deltaScreenX, deltaScreenY, 1e-4,
             $"Isotropie verletzt: 1m in X = {deltaScreenX:F2}px, 1m in Y = {deltaScreenY:F2}px");
     }
@@ -69,7 +68,6 @@ public class GeometryTests
         Point pBottom = transform.WorldToScreen(5.0, 0.0);
         Point pTop = transform.WorldToScreen(5.0, 10.0);
 
-        // Welt Y=10 muss auf dem Canvas einen KLEINEREN Y-Wert haben als Welt Y=0 (Y wächst nach unten!)
         Assert.IsTrue(pTop.Y < pBottom.Y,
             $"Y-Inversion fehlerhaft: pTop.Y ({pTop.Y}) muss kleiner sein als pBottom.Y ({pBottom.Y})");
     }
@@ -80,7 +78,6 @@ public class GeometryTests
         var sprint = TrussGeometry.CreateSprintTriangle();
         var (xMin, xMax, yMin, yMax) = sprint.GetBounds();
 
-        // Dreieck: (0,0), (4,0), (2,2)
         Assert.AreEqual(0.0, xMin, 1e-6);
         Assert.AreEqual(4.0, xMax, 1e-6);
         Assert.AreEqual(0.0, yMin, 1e-6);
@@ -88,7 +85,7 @@ public class GeometryTests
     }
 
     // =====================================================================
-    // Neue Tests für Track A: Zoom und Pan
+    // Tests für Track A: Zoom und Pan
     // =====================================================================
 
     [TestMethod]
@@ -97,7 +94,6 @@ public class GeometryTests
         var transform = new Transform2D();
         transform.Update(0.0, 12.0, 0.0, 4.0, 900.0, 600.0);
 
-        // Beliebige Kameraeinstellung
         transform.ZoomAt(300.0, 200.0, 2.5);
         transform.PanBy(37.0, -21.0);
 
@@ -123,13 +119,11 @@ public class GeometryTests
         var transform = new Transform2D();
         transform.Update(0.0, 10.0, 0.0, 5.0, 800.0, 600.0);
 
-        // Weltpunkt (3, 2) liegt an einer bestimmten Bildschirmposition = "Mauszeiger"
         Point cursor = transform.WorldToScreen(3.0, 2.0);
 
         transform.ZoomAt(cursor.X, cursor.Y, 2.0);
         Point after = transform.WorldToScreen(3.0, 2.0);
 
-        // Fixpunkt-Zoom: der Punkt unter dem Cursor darf nicht wandern
         Assert.AreEqual(cursor.X, after.X, 1e-6);
         Assert.AreEqual(cursor.Y, after.Y, 1e-6);
     }
@@ -179,7 +173,7 @@ public class GeometryTests
     }
 
     // =====================================================================
-    // Neue Tests für Track A: Kranmodell
+    // Tests für Track A: Auslegerkran (3. Modell)
     // =====================================================================
 
     [TestMethod]
@@ -187,10 +181,10 @@ public class GeometryTests
     {
         var crane = TrussGeometry.CreateCantileverCraneTruss();
 
-        Assert.AreEqual(10, crane.Nodes.Count);
-        Assert.AreEqual(17, crane.Bars.Count);
+        Assert.AreEqual(10, crane.Nodes.Count, "Auslegerkran muss exakt 10 Knoten haben.");
+        Assert.AreEqual(17, crane.Bars.Count, "Auslegerkran muss exakt 17 Stäbe haben.");
 
-        // Abzählkriterium für ein statisch bestimmtes Fachwerk: b = 2k - 3
+        // Abzählkriterium für statisch bestimmte ebene Fachwerke: b = 2*k - 3
         Assert.AreEqual(2 * crane.Nodes.Count - 3, crane.Bars.Count);
     }
 
@@ -202,13 +196,13 @@ public class GeometryTests
 
         foreach (var bar in crane.Bars)
         {
-            Assert.IsTrue(ids.Contains(bar.NodeAId), $"Stab {bar.Id}: Knoten A {bar.NodeAId} fehlt");
-            Assert.IsTrue(ids.Contains(bar.NodeBId), $"Stab {bar.Id}: Knoten B {bar.NodeBId} fehlt");
+            Assert.IsTrue(ids.Contains(bar.NodeAId), $"Stab {bar.Id}: Knoten A {bar.NodeAId} existiert nicht.");
+            Assert.IsTrue(ids.Contains(bar.NodeBId), $"Stab {bar.Id}: Knoten B {bar.NodeBId} existiert nicht.");
         }
     }
 
     // =====================================================================
-    // Neue Tests für Track A: JSON
+    // Tests für Track A: JSON
     // =====================================================================
 
     [TestMethod]
@@ -273,7 +267,7 @@ public class GeometryTests
         }
         catch (InvalidDataException)
         {
-            // erwartet
+            // Erwartet
         }
     }
 }
