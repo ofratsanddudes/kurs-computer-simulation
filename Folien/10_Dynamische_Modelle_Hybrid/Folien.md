@@ -25,33 +25,34 @@ Dieses Kapitel beinhaltet Folgendes:
 
 ---
 
-### Showcase & Peer Review: Termin 09 (Diskrete Systeme & DES)
+### Live-Showcase & Code-Defense: Termin 09
+
+Präsentation der Hausübung aus Termin 09 (**Stufe 1: Basisaufgabe** + **Stufe 2: Track A oder B**, [Aufgabenblatt 09](../../Uebungen/Termin_09_Diskrete_Systeme_DES/Aufgabenblatt.md)):
 
 <div class="columns">
 <div class="two">
 
-**Track A: Lackierstraße M/M/c (Industrie)**
+#### Stufe 2 – Track A: Lackierstraße M/M/c (Industrie)
 - Automobil-Lackierstraße mit 3 Kabinen
 - Puffer mit Blocking ($K = 25$) & Abweisung
 - Prioritätswarteschlange (Express vs. Standard)
 - Numerische Verifikation via Little's Gesetz
-- *Peer Review:* Welford-Varianz & Konfidenz
+- *Code-Defense:* Welford-Varianz & Konfidenz
 
 </div>
 <div class="two">
 
-**Track B: Theme Park Queue (Game)**
+#### Stufe 2 – Track B: Theme Park Queue (Game)
 - Achterbahn-Warteschlangen-Rush
 - Stochastische Peaks & Zwischenankünfte
 - VIP-Fastpass mit `PriorityQueue`
 - Interaktives Dashboard gegen Queue-Kollaps
-- *Peer Review:* Stochastische Kausalität & Seeds
+- *Code-Defense:* Stochastische Kausalität & Seeds
 
 </div>
 </div>
 
-> [!NOTE]
-> **Showcase & Plenumsdiskussion:** Live-Demonstration beider Tracks auf der Beamer-Bühne. Fokus: Little's Gesetz, Pufferüberlauf-Wahrscheinlichkeiten und Welford-Akkumulation. Details: [Aufgabenblatt Termin 09](../../Uebungen/Termin_09_Diskrete_Systeme_DES/Aufgabenblatt.md).
+> **Code-Defense (Säule 2b, 20 %):** Live-Demonstration am Beamer. Fokus: Little's Gesetz ($\bar{L} = \lambda_{\text{eff}}\bar{W}$), Pufferüberlauf und Monte-Carlo-Konfidenzintervalle.
 
 ---
 
@@ -61,10 +62,23 @@ Dieses Kapitel beinhaltet Folgendes:
 
 Dieser Abschnitt beinhaltet Folgendes:
 
+- Brücke & Synthese: Verschmelzung von Termin 08 (ODE) und Termin 09 (Events).
 - Mathematische Modellierung der Freiflugphase (kontinuierlich).
 - Modellierung des Aufpralls als diskretes Ereignis.
 - Herleitung der analytischen Lösung für die hybride Trajektorie.
 - Simulation der Abfolge von kontinuierlichen Phasen und diskreten Sprüngen.
+
+---
+
+### Rückblick & Brücke: Wo stehen wir in der Vorlesung?
+
+In **Termin 08** haben wir rein kontinuierliche Flüsse (ODEs) und in **Termin 09** rein diskrete Ereignissprünge (DES) getrennt voneinander betrachtet – doch wie verhält sich ein realer **Digitaler Zwilling** in der Automatisierungstechnik?
+
+- **Warum weder Termin 08 noch Termin 09 allein ausreichen:**
+  - Eine reale Hydraulikpresse, ein Roboter mit Greifkontakt oder ein geschalteter Stromrichter bewegt sich zwar **kontinuierlich nach Differentialgleichungen (Termin 08)**, trifft aber plötzlich auf **harte mechanische Anschläge, Sicherheits-Lichtschranken, Ventil-Umschaltungen oder digitale SPS-Abtasttakte (Termin 09)**!
+  - Ein reiner RK4-Solver aus Termin 08 überspringt im festen Zeitschritt $\Delta t$ den exakten Aufprallmoment (**Tunneling-Fehler** / Energie-Explosion).
+- **Einordnung ins große Ganze (4. Modellart & Krönung des Kurses):**
+  - Heute verschmelzen wir **kontinuierliche Integration (T08)** und **diskrete Ereignisbehandlung (T09)** zur **Hybriden Simulation** mit **Zero-Crossing-Bisektion** und variablen Abtastzeiten.
 
 ---
 
@@ -83,7 +97,7 @@ Das System wird durch folgende Annahmen vereinfacht:
 </div>
 <div class="four">
 
-![w:500](./Diagramme/BouncingBall_Zeit-Positions-Diagramm.tikz.svg)
+![](./Diagramme/BouncingBall_Zeit-Positions-Diagramm.tikz.svg)
 
 </div>
 </div>
@@ -109,7 +123,7 @@ $$ \dot{y} = v \text{ und } \dot{v} = -g $$
 </div>
 <div>
 
-![w:500](./Diagramme/BouncingBall_Flugparabel.tikz.svg)
+![](./Diagramme/BouncingBall_Flugparabel.tikz.svg)
 
 </div>
 </div>
@@ -131,7 +145,7 @@ Diese Bedingungen definieren ein sogenanntes *Nulldurchgangsereignis*, bei dem d
 </div>
 <div>
 
-![w:500](./Diagramme/BouncingBall_Aufprall_Bedingung.tikz.svg)
+![](./Diagramme/BouncingBall_Aufprall_Bedingung.tikz.svg)
 
 </div>
 </div>
@@ -154,7 +168,7 @@ $$ v(t_e^+) = -e \cdot v(t_e^-) $$
 </div>
 <div>
 
-![w:500](./Diagramme/BouncingBall_Aufprall_Zustandsaenderung.tikz.svg)
+![](./Diagramme/BouncingBall_Aufprall_Zustandsaenderung.tikz.svg)
 
 </div>
 </div>
@@ -181,7 +195,7 @@ Diese Gleichungen gelten, solange der Ball sich in der Luft befindet ($y(t) > 0$
 </div>
 <div>
 
-![w:500](./Diagramme/BouncingBall_Freiflug_Position_Geschwindigkeit.tikz.svg)
+![](./Diagramme/BouncingBall_Freiflug_Position_Geschwindigkeit.tikz.svg)
 
 </div>
 </div>
@@ -203,7 +217,7 @@ Dies ist eine quadratische Gleichung für $\Delta t = (t_e - t_0)$. Die positive
 </div>
 <div>
 
-![w:500](./Diagramme/BouncingBall_Aufprall_Zeitpunkt.tikz.svg)
+![](./Diagramme/BouncingBall_Aufprall_Zeitpunkt.tikz.svg)
 
 </div>
 </div>
@@ -369,7 +383,7 @@ Dieses Signal existiert und ändert sich kontinuierlich über die Zeit.
 </div>
 <div>
 
-![w:500](./Diagramme/DigitalerSensor_Eingangssignal.tikz.svg)
+![](./Diagramme/DigitalerSensor_Eingangssignal.tikz.svg)
 
 </div>
 </div>
@@ -395,7 +409,7 @@ $$ U_{sens}(t) = U(t_k) \quad \text{für} \quad t_k \le t < t_{k+1} $$
 </div>
 <div>
 
-![w:500](./Diagramme/DigitalerSensor_Abtastung.tikz.svg)
+![](./Diagramme/DigitalerSensor_Abtastung.tikz.svg)
 
 </div>
 </div>
@@ -418,7 +432,7 @@ Im Gegensatz zum Bouncing Ball sind die Ereignisse hier **zeitgesteuert** (perio
 </div>
 <div>
 
-![w:500](./Diagramme/DigitalerSensor_Gesamtsystem.tikz.svg)
+![](./Diagramme/DigitalerSensor_Gesamtsystem.tikz.svg)
 
 </div>
 </div>
@@ -443,7 +457,7 @@ Dies führt zu einem **ereignisgesteuerten hybriden System**, bei dem die Abtast
 </div>
 <div>
 
-![w:500](./Diagramme/DigitalerSensor_VariableAbtastrate_Signal.tikz.svg)
+![](./Diagramme/DigitalerSensor_VariableAbtastrate_Signal.tikz.svg)
 
 </div>
 </div>
@@ -483,7 +497,7 @@ Die variable Abtastlogik nutzt $c(t)$, um die Abtastrate anzupassen:
 </div>
 <div>
 
-![w:500](./Diagramme/DigitalerSensor_Eingangs_und_Steuersignal.tikz.svg)
+![](./Diagramme/DigitalerSensor_Eingangs_und_Steuersignal.tikz.svg)
 
 </div>
 </div>
@@ -506,7 +520,7 @@ Die variable Abtastlogik nutzt $c(t)$, um die Abtastrate anzupassen:
 </div>
 <div>
 
-![w:500](./Diagramme/DigitalerSensor_VariableAbtastung.tikz.svg)
+![](./Diagramme/DigitalerSensor_VariableAbtastung.tikz.svg)
 
 </div>
 </div>
@@ -825,7 +839,7 @@ Das Konzept der Abtastzeit (`SampleTime`) wurde eingeführt, um dem Solver mitzu
 
 ---
 
-### Umsetzung der `SampleTime`-Klassen
+### Umsetzung der `SampleTime`-Klassen *(Deep Dive / Framework-Referenz)*
 
 <div class="columns">
 <div class="three">
@@ -859,7 +873,7 @@ public class VariableSampleTime : SampleTime
 
 ---
 
-### ZeroOrderHoldBlock
+### ZeroOrderHoldBlock *(Deep Dive / Framework-Referenz)*
 
 Der `ZeroOrderHoldBlock` realisiert die klassische Abtastung und Haltefunktion (Sample & Hold):
 
@@ -880,7 +894,7 @@ public override void UpdateStates(double time,
 
 ---
 
-### DiscreteTimeIntegratorBlock
+### DiscreteTimeIntegratorBlock *(Deep Dive / Framework-Referenz)*
 
 Der `DiscreteTimeIntegratorBlock` führt eine Integration über die Zeit in diskreten Schritten durch (Summation):
 
@@ -902,7 +916,7 @@ public override void UpdateStates(double time,
 
 ---
 
-### HitLowerLimitBlock (Ereignisdetektion)
+### HitLowerLimitBlock (Ereignisdetektion) *(Deep Dive / Framework-Referenz)*
 
 Dieser Block dient der Detektion von Schwellwert-Unterschreitungen (Events), ohne den Zustand selbst zu ändern:
 
@@ -922,7 +936,7 @@ public override void CalculateZeroCrossings(
 
 ---
 
-### IntegrateWithReset (Zustandsmanipulation)
+### IntegrateWithReset (Zustandsmanipulation) *(Deep Dive / Framework-Referenz)*
 
 Ein kontinuierlicher Integrator, dessen Zustand durch ein diskretes Ereignis zurückgesetzt werden kann:
 
@@ -945,7 +959,7 @@ public override void UpdateStates(
 
 ---
 
-### IntegrateWithLowerLimit
+### IntegrateWithLowerLimit *(Deep Dive / Framework-Referenz)*
 
 Ein Integrator mit einer harten unteren Schranke (wichtig z.B. beim Bouncing Ball, damit dieser nicht "durch den Boden" fällt):
 
@@ -968,7 +982,7 @@ public override void UpdateStates(
 
 ---
 
-### VariableSampleTimeBlock
+### VariableSampleTimeBlock *(Deep Dive / Framework-Referenz)*
 
 Ein Block, der seine Abtastzeit dynamisch anpassen kann (Ereignissteuerung):
 
@@ -1039,7 +1053,7 @@ Der Solver nutzt einen iterativen Prozess, um den genauen Zeitpunkt eines Ereign
 </div>
 <div>
 
-![h:440px](./Diagramme/Nulldurchgang.svg)
+![](./Diagramme/Nulldurchgang.svg)
 
 </div>
 </div>
@@ -1069,7 +1083,7 @@ while (zeroCrossingValue > Threshold && iteration++ < Limit) {
 - Nulldurchgang erfordert Vorzeichenwechsel (Bolzano): $\operatorname{sgn}(z(t_a)) \neq \operatorname{sgn}(z(t_b)) \iff z(t_a) \cdot z(t_b) \le 0$.
 - Echte Bisektion halbiert das Suchintervall; naive Schritt-Halbierung verfehlt Nullstellen bei $t > t_0 + 0{,}5\Delta t$.
 
-![w:920 center](./Diagramme/ZeroCrossing_Bisektion_Intervall.svg)
+![](./Diagramme/ZeroCrossing_Bisektion_Intervall.svg)
 
 ---
 
@@ -1120,7 +1134,7 @@ Das Flussdiagramm verdeutlicht die Entscheidungslogik des Solvers bei der Ereign
 </div>
 <div>
 
-![h:460px](./Diagramme/Solver_Logik.svg)
+![](./Diagramme/Solver_Logik.svg)
 
 </div>
 </div>
@@ -1309,7 +1323,7 @@ Auch das Ergebnis des impliziten Solvers sieht gut besser aus, da die Randbeding
 
 ![bg right](./Illustrationen/Abschnitt_6.jpg)
 
-## 10.6: Diskrete Abtastzeiten
+## 10.6: Diskrete Abtastzeiten *(Deep Dive / Framework-Referenz)*
 
 In diesem Abschnitt haben wir gesehen:
 
@@ -1320,7 +1334,7 @@ In diesem Abschnitt haben wir gesehen:
 
 ---
 
-### Initialisierung der Abtastzeitpunkte
+### Initialisierung der Abtastzeitpunkte *(Deep Dive)*
 
 Der Solver muss wissen, wann der *erste* diskrete Zeitschritt stattfindet. Dies geschieht in der `InitializeStates`-Methode.
 
@@ -1338,7 +1352,7 @@ if (f.SampleTime is DiscreteSampleTime)
 
 ---
 
-### Berücksichtigung im Solver: **Max Time Step**
+### Berücksichtigung im Solver: **Max Time Step** *(Deep Dive)*
 
 Der Solver muss sicherstellen, dass er **exakt** auf einem diskreten Abtastzeitpunkt landet und nicht "darüber hinweg" integriert.
 
@@ -1361,7 +1375,7 @@ foreach (Block b in Blocks)
 
 ---
 
-### Berücksichtigung im Solver: **Update States**
+### Berücksichtigung im Solver: **Update States** *(Deep Dive)*
 
 Nachdem der Integrationsschritt durchgeführt wurde (und die Zeit `t` erreicht ist), prüft der Solver, welche diskreten Blöcke "fällig" sind.
 
@@ -1384,7 +1398,7 @@ else if (f.SampleTime is DiscreteSampleTime)
 
 ---
 
-### Berechnung des nächsten Abtastzeitpunkts
+### Berechnung des nächsten Abtastzeitpunkts *(Deep Dive)*
 
 Bei **diskreten** Abtastzeiten ist der nächste Zeitpunkt streng deterministisch und periodisch.
 
@@ -1402,7 +1416,7 @@ $t_{k+1} = t_k + T_{Period}$
 
 ---
 
-### Beispiel: **Basic Discrete Example**
+### Beispiel: **Basic Discrete Example** *(Deep Dive)*
 
 <div class="columns">
 <div class="three">
@@ -1426,7 +1440,7 @@ Das Modell kombiniert kontinuierliche Integration mit diskreter Abtastung:
 
 ![bg contain right](./Screenshots/ZeroOrderHold_Explizit.png)
 
-### Lösung mit dem **expliziten** Solver
+### Lösung mit dem **expliziten** Solver *(Deep Dive)*
 
 Das Diagramm zeigt die kontinuierliche Parabel (blau/orange) und das **treppenförmige** Ausgangssignal des Zero-Order Holds (grün).
 
@@ -1438,7 +1452,7 @@ Das Diagramm zeigt die kontinuierliche Parabel (blau/orange) und das **treppenf�
 
 ![bg right](./Illustrationen/Abschnitt_7.jpg)
 
-## 10.7: Variable Abtastzeiten
+## 10.7: Variable Abtastzeiten *(Deep Dive / Framework-Referenz)*
 
 In diesem Abschnitt haben wir gesehen:
 
@@ -1448,7 +1462,7 @@ In diesem Abschnitt haben wir gesehen:
 
 ---
 
-### Initialisierung des ersten Zeitpunkts
+### Initialisierung des ersten Zeitpunkts *(Deep Dive)*
 
 Auch bei **variabler Abtastzeit** muss der erste Aufrufzeitpunkt bekannt sein, um die Ereigniskette zu starten.
 
@@ -1466,7 +1480,7 @@ else if (f.SampleTime is VariableSampleTime)
 
 ---
 
-### Berücksichtigung im Solver: **Max Time Step**
+### Berücksichtigung im Solver: **Max Time Step** *(Deep Dive)*
 
 Der Solver behandelt variable Abtastzeiten bei der Schrittweitensteuerung identisch zu diskreten Abtastzeiten.
 
@@ -1488,7 +1502,7 @@ foreach (Block b in Blocks)
 
 ---
 
-### Berücksichtigung im Solver: **Update States**
+### Berücksichtigung im Solver: **Update States** *(Deep Dive)*
 
 Auch hier ist die Logik analog, aber sie delegiert die Berechnung des nächsten Zeitpunkts an den Block selbst (*statt der Berechnung mittels Abtastperiode*).
 
@@ -1511,7 +1525,7 @@ else if (f.SampleTime is VariableSampleTime)
 
 ---
 
-### Berechnung des nächsten variablen Zeitpunkts
+### Berechnung des nächsten variablen Zeitpunkts *(Deep Dive)*
 
 Die Klasse `Block` stellt die virtuelle Methode `GetNextVariableHitTime` bereit, die von spezifischen Blöcken überschrieben werden kann.
 
@@ -1535,7 +1549,7 @@ public override double GetNextVariableHitTime(double time, ..., double[] inputs)
 
 ---
 
-### Beispiel: **Variable Sample Time**
+### Beispiel: **Variable Sample Time** *(Deep Dive)*
 
 <div class="columns">
 <div class="two">
@@ -1559,7 +1573,7 @@ Ein System, bei dem die Abtastrate kontinuierlich abnimmt (d.h. das Zeitinterval
 
 ![bg contain right](./Screenshots/VariableSampleTime_Explizit.png)
 
-### Lösung mit dem **expliziten** Solver
+### Lösung mit dem **expliziten** Solver *(Deep Dive)*
 
 - **Orange Kurve:** Das kontinuierlich ansteigende $\Delta t$ (Ausgang des Integrators).
 - **Blaue Punkte:** Die Zeitpunkte, zu denen der `VariableSampler` das letzte Mal aktiv wurde.
@@ -1575,7 +1589,7 @@ Der Block steuert seine eigene Ausführungs-frequenz dynamisch basierend auf dem
 - **Nulldurchgangsdetektion (Zero-Crossings):** Schaltfunktionen $z(\mathbf{x}_c) = 0$ erkennen Ereignisse unabhängig vom festen Zeitschrittgitter.
 - **Intervall-Bisektion:** Garantiert robuste Nullstelleneinkreisung über Vorzeichenwechsel ($\text{sgn}(z(t_a)) \neq \text{sgn}(z(t_b))$) und synchronisiert die verbleibende Restzeit $\Delta t_{\text{remaining}}$ exakt.
 - **Zeno-Phänomen & Haftkontakt:** Unendliche Stoßhäufungen in endlicher Zeit ($dt \to 0$) werden numerisch durch energetische Haftschwellen (`nearZero` $\implies$ Umschaltung in Sticking-Modus) beherrscht.
-- **Abtastraten-Koordination:** Diskrete und kontinuierliche Blöcke mit unterschiedlichen Tasks (Periodisch, Multirate, Variable Sample Time) koexistieren in einer gemeinsamen Simulations-Engine.
+- **Abtastraten-Koordination:** Diskrete und kontinuierliche Blöcke mit unterschiedlichen Tasks (Periodisch, Multirate, Variable Sample Time) koexistieren in einer gemeinsamen Simulations-Engine *(im Labor `Termin_10` kompakt abgebildet über `IHybridSystem` und `BisectionRootFinder.FindRoot`)*.
 
 ---
 
@@ -1597,12 +1611,14 @@ Das gesamte Methodenspektrum steht nun zur Verfügung:
 
 ---
 
-### Hands-on Labor: Termin 10 – Pick your Track!
+### Hausübung Termin 10: Hybride Dynamik, Bisektion & Zeno
+
+**Stufe 1 (Basisaufgabe `1.1`–`1.3` für alle Teams auf `HybridZeroCrossing.sln`):** Festschritt vs. Bisektion, Zeno-Wakeup & Energie-Telemetrie ([Aufgabenblatt 10](../../Uebungen/Termin_10_Hybride_Dynamik_Synthese/Aufgabenblatt.md)) $\to$ **Stufe 2 (Vertiefung – Wahl: Track A ODER Track B, 10 Pkt.):**
 
 <div class="columns">
 <div class="two">
 
-**Track A: VIBN Pneumatikzylinder (Industrie)**
+#### Stufe 2 – Track A: VIBN Pneumatikzylinder (Industrie)
 - **Szenario:** Virtuelle Inbetriebnahme Taktvorschub
 - Kontinuierliche Kammer-Druckdynamik ($p_1, p_2$)
 - Anschlag bei $x_{\max}$ mit Zero-Crossing-Bisektion
@@ -1612,7 +1628,7 @@ Das gesamte Methodenspektrum steht nun zur Verfügung:
 </div>
 <div class="two">
 
-**Track B: Arcade Pinball Wizard (Game)**
+#### Stufe 2 – Track B: Arcade Pinball Wizard (Game)
 - **Szenario:** Flipper-Kugel-Dynamik & Bumper
 - Stetige Gravitations- & Rampentrajektorie
 - Bisektion verhindert Hindernis-Durchtunneln
@@ -1621,9 +1637,5 @@ Das gesamte Methodenspektrum steht nun zur Verfügung:
 
 </div>
 </div>
-
-> [!TIP]
-> **Arbeitsauftrag:** Bearbeiten Sie im 2er-Team **GENAU EINEN** der beiden Tracks!
-> Aufgabenstellung & Vorlagen: [Aufgabenblatt Termin 10](../../Uebungen/Termin_10_Hybride_Dynamik_Synthese/Aufgabenblatt.md).
 
 

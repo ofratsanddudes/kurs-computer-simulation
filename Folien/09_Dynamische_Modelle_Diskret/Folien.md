@@ -27,33 +27,34 @@ Dieses Kapitel umfasst die folgenden Abschnitte:
 
 ---
 
-### Showcase & Peer Review: Termin 08 (Kontinuierliche Dynamik & RK4)
+### Live-Showcase & Code-Defense: Termin 08
+
+Präsentation der Hausübung aus Termin 08 (**Stufe 1: Basisaufgabe** + **Stufe 2: Track A oder B**, [Aufgabenblatt 08](../../Uebungen/Termin_08_DGL_und_SFunctions/Aufgabenblatt.md)):
 
 <div class="columns">
 <div class="two">
 
-**Track A: DC-Servomotor (Industrie)**
-- Zustandsraum-Modellierung ($i, \omega, \theta$)
-- 4-stufige RK4-Integration ($h = 1\,\text{ms}$)
-- PI-Lageregelung mit Lastsprung
+#### Stufe 2 – Track A: DC-Servomotor (Industrie)
+- Zustandsraum-Modellierung ($i, \omega, \theta, T_{\text{Cu}}$)
+- Verfahrensvergleich Euler vs. Heun vs. RK4
+- PID-Lageregelung mit Lastsprung & Derating
 - Anti-Windup Clamping gegen Überschwingen
-- *Peer Review:* Verhalten bei Aktor-Sättigung
+- *Code-Defense:* Verhalten bei Aktor-Sättigung
 
 </div>
 <div class="two">
 
-**Track B: SpaceX Falcon Hop (Game)**
+#### Stufe 2 – Track B: SpaceX Falcon Hop (Game)
 - Raketen-Schwebeflug & dynamische Landung
 - Gekoppelte Translation & Drehträgheit
 - Kaskadierter PID & Schubvektor-Gimbal
 - Balancer gegen Inverted-Pendulum-Kippen
-- *Peer Review:* RK4-Stabilität & Regelparameter
+- *Code-Defense:* RK4-Stabilität & Regelparameter
 
 </div>
 </div>
 
-> [!NOTE]
-> **Showcase & Plenumsdiskussion:** Live-Demonstration beider Tracks auf der Beamer-Bühne. Fokus: Anti-Windup Clamping unter Lastsprung und RK4-Schrittweitenwahl. Details: [Aufgabenblatt Termin 08](../../Uebungen/Termin_08_DGL_und_SFunctions/Aufgabenblatt.md).
+> **Code-Defense (Säule 2b, 20 %):** Live-Demonstration am Beamer. Fokus: Anti-Windup Clamping unter Lastsprung und RK4- vs. Euler-Stabilitätsgrenze.
 
 ---
 
@@ -63,9 +64,24 @@ Dieses Kapitel umfasst die folgenden Abschnitte:
 
 Dieser Abschnitt umfasst die folgenden Inhalte:
 
+- **Brücke zu Termin 08:** Warum Zeitschritt-Solver bei Logistik versagen
 - **Definition** diskreter dynamischer Modelle
 - **Abgrenzung** zu kontinuierlichen Modellen
 - **Typische Anwendungsbeispiele** wie Warteschlangensysteme
+
+---
+
+### Rückblick & Brücke: Wo stehen wir in der Vorlesung?
+
+In **Termin 08** haben wir kontinuierliche Systeme (Motoren, Regelkreise) mit festen Zeitschritten $\Delta t = 1\,\text{ms}$ integriert – warum scheitert dieser Ansatz bei einer ganzen Fabrik oder Lackierstraße?
+
+- **Rückblick auf Termin 08 (Zeitgesteuerte ODE-Integration):**
+  - Bei einem Elektromotor ändern sich Strom $i(t)$ und Drehzahl $\omega(t)$ in jeder Mikrosekunde stetig – ein festes Zeitraster $\Delta t$ ist hier ideal.
+- **Der Engpass heute (Leerlauf-Explosion bei seltenen Ereignissen):**
+  - In einer Produktionslinie oder Warteschlange passiert oft minutenlang nichts, bis plötzlich zu einem krummen Zeitpunkt $t = 14{,}382\,\text{s}$ ein Werkstück eintrifft oder eine Maschine ausfällt.
+  - Ein kontinuierlicher $\Delta t$-Solver würde Millionen nutzloser Leerschritte rechnen und den exakten Ereigniszeitpunkt trotzdem verfehlen!
+- **Einordnung ins große Ganze (3. Modellart: Discrete Event Simulation):**
+  - Statt die Zeit in feste Scheiben $\Delta t$ zu schneiden, springen wir heute über eine **Ereignis-Warteschlange (`PriorityQueue`)** direkt von Ereignis zu Ereignis und koppeln dies mit **Monte-Carlo-Simulationsläufen** (Parallelisierung aus Termin 06!).
 
 ---
 
@@ -307,7 +323,7 @@ Dieser Abschnitt umfasst die folgenden Inhalte:
 
 ---
 
-### Konkretes Beispiel: Simulationsablauf
+### Konkretes Beispiel: Simulationsablauf *(Deep Dive / Nachrechnen)*
 
 <div class="columns">
 <div>
@@ -332,7 +348,7 @@ Annahmen für das Beispiel:
 
 ---
 
-### Tabellarischer Ablauf
+### Tabellarischer Ablauf *(Deep Dive / Nachrechnen)*
 
 Die folgende Tabelle zeigt die Werte der `Clock`, des `State` und der `EventQueue` während der Simulationsrechnung:
 
@@ -529,7 +545,7 @@ if (next is ArrivalEvent)
     else
     {
         State.Busy = true;
-        var serviceTime = Random.NextDouble() * 5 * 60;
+        var serviceTime = Random.Shared.NextDouble() * 5 * 60;
         Add(new DepartureEvent(Clock + serviceTime));
     }
 }
@@ -571,7 +587,7 @@ else if (next is DepartureEvent)
         var arrivalTime = State.Queue.Dequeue();
         var waitTime = Clock - arrivalTime;
         // ...
-        var serviceTime = Random.NextDouble() * 5 * 60;
+        var serviceTime = Random.Shared.NextDouble() * 5 * 60;
         Add(new DepartureEvent(Clock + serviceTime));
     }
 }
@@ -693,7 +709,7 @@ plot.Add.Bars(bars);
 </div>
 <div class="two">
 
-![h:380px](./Illustrationen/Queue_Wartezeit_Histogramm.png)
+![](./Illustrationen/Queue_Wartezeit_Histogramm.png)
 
 </div>
 </div>
@@ -734,7 +750,36 @@ plot.Add.Bars(bars);
 - Kinetik als kontinuierlicher Geburts- und Todesprozess mit Raten $\lambda$ (Zulauf) und $\mu$ (Ablauf).
 - Stationäre Zustandswahrscheinlichkeit: $P_k = (1 - \rho)\rho^k \implies \bar{L}_q = \frac{\rho^2}{1-\rho}, \quad \bar{W}_q = \frac{\rho}{\mu - \lambda}$.
 
-![w:920 center](./Diagramme/MM1_Warteschlange_Kinetik.svg)
+![](./Diagramme/MM1_Warteschlange_Kinetik.svg)
+
+---
+
+### Erweiterung auf reale Anlagen: $M/M/c/K$ & Prioritäten
+
+<div class="columns top">
+<div class="one">
+
+**Mehrkanal-Systeme mit Pufferlimit ($M/M/c/K$):**
+- **$c$ parallele Stationen:** Auslastung $\rho = \frac{\lambda}{c \cdot \mu}$. Statt `bool Busy` zählt `int busyServers < c`.
+- **Endlicher Puffer $K$ (Blocking):** Ist der Puffer voll (`waitingQueue.Count >= K`), werden ankommende Aufträge mit Blockierwahrscheinlichkeit $P_{\text{Block}} = \frac{N_{\text{rejected}}}{N_{\text{total}}}$ abgewiesen.
+- **Little's Gesetz mit effektivem Durchsatz:**
+  $$\lambda_{\text{eff}} = \lambda \cdot (1 - P_{\text{Block}}) \implies \bar{L}_q = \lambda_{\text{eff}} \cdot \bar{W}_q$$
+
+</div>
+<div class="one">
+
+**Prioritäts-Warteschlangen (Express / VIP):**
+- Eilige Aufträge überholen Standard-Aufträge im Puffer (ohne laufende Bearbeitungen abzubrechen – *Non-Preemptive*):
+```csharp
+// Zwei getrennte FIFO-Schlangen:
+var next = vipQueue.Count > 0 
+    ? vipQueue.Dequeue() 
+    : standardQueue.Dequeue();
+```
+- Oder via `PriorityQueue<Job, (int Prio, double Arrival)>`.
+
+</div>
+</div>
 
 ---
 
@@ -823,14 +868,14 @@ Die folgenden beiden Diagramme zeigen den Verlauf der Wahrscheinlichkeitsdichtef
 
 **Wahrscheinlichkeitsdichtefunktion**
 
-![width:395](./Illustrationen/ExpDichteF.svg)
+![](./Illustrationen/ExpDichteF.svg)
 
 </div>
 <div>
 
 **Kumulative Verteilungsfunktion**
 
-![width:395](./Illustrationen/ExpVerteilungF.svg)
+![](./Illustrationen/ExpVerteilungF.svg)
 
 </div>
 </div>
@@ -859,7 +904,7 @@ private double NextExponential(Random random, double lambda)
 
 ---
 
-### Herleitung mittels Inversionsmethode (1/2) - **Prinzip**
+### Herleitung mittels Inversionsmethode (1/2) - **Prinzip** *(Deep Dive)*
 
 <div class="columns">
 <div class="three">
@@ -873,14 +918,14 @@ Die **Inversionsmethode** (Inverse Transform Sampling) ist ein Verfahren zur Erz
 </div>
 <div class="two">
 
-![w:500](./Diagramme/Inversionsmethode_Prinzip.tikz.svg)
+![](./Diagramme/Inversionsmethode_Prinzip.tikz.svg)
 
 </div>
 </div>
 
 ---
 
-### Herleitung mittels Inversionsmethode (2/2) - **Exponentialverteilung**
+### Herleitung mittels Inversionsmethode (2/2) - **Exponentialverteilung** *(Deep Dive)*
 
 **Ziel:** Erzeuge eine Zufallsvariable $X$ mit der CDF $F_X(x) = 1 - e^{-\lambda x}$ für $x \ge 0$.
 
@@ -955,7 +1000,7 @@ private double NextNormal(Random random, double mean, double stdDev)
 
 ---
 
-### Herleitung der Box-Muller-Transformation (1/3) - **Die Idee**
+### Herleitung der Box-Muller-Transformation (1/3) - **Die Idee** *(Deep Dive)*
 
 Die **Box-Muller-Transformation** ist eine Methode zur Erzeugung von Paaren unabhängiger, standardnormalverteilter Zufallszahlen aus Paaren unabhängiger, gleichverteilter Zufallszahlen.
 
@@ -970,7 +1015,7 @@ Die **Box-Muller-Transformation** ist eine Methode zur Erzeugung von Paaren unab
 
 ---
 
-### Herleitung der Box-Muller-Transformation (2/3) - **Die Transformation**
+### Herleitung der Box-Muller-Transformation (2/3) - **Die Transformation** *(Deep Dive)*
 
 Die Transformation von kartesischen zu Polarkoordinaten führt zu neuen Zufallsvariablen $R$ (Radius) und $\Theta$ (Winkel).
 
@@ -987,7 +1032,7 @@ Die Transformation von kartesischen zu Polarkoordinaten führt zu neuen Zufallsv
 
 ---
 
-### Herleitung der Box-Muller-Transformation (3/3) - **Die Formeln**
+### Herleitung der Box-Muller-Transformation (3/3) - **Die Formeln** *(Deep Dive)*
 
 Durch Einsetzen von $R$ und $\Theta$ in die Polarkoordinaten-Gleichungen erhalten wir die beiden standardnormalverteilten Zufallszahlen $Z_1$ und $Z_2$:
 
@@ -1004,7 +1049,7 @@ Durch Einsetzen von $R$ und $\Theta$ in die Polarkoordinaten-Gleichungen erhalte
 
 ### Stochastische Kausalität bei Bedienzeiten
 
-In diskreten Ereignissimulatoren steuern Zufallsvariablen die Zeitdauer bis zum nächsten Ereignis ($t_{\text{Event}} = \text{Clock} + T$):
+In diskreten Ereignissimulatoren steuern Zufallszahlen die Zeitdauer bis zum nächsten Ereignis ($t_{\text{Event}} = \text{Clock} + T$):
 
 - **Kausalitätsprinzip:** Ein zukünftiges Ereignis darf niemals in der Vergangenheit stattfinden: $T > 0$.
 - **Problem der Normalverteilung:**
@@ -1016,7 +1061,7 @@ In diskreten Ereignissimulatoren steuern Zufallsvariablen die Zeitdauer bis zum 
 
 ---
 
-### Die Log-Normal-Verteilung: Parameterumrechnung
+### Die Log-Normal-Verteilung: Parameterumrechnung *(Deep Dive)*
 
 Eine Zufallsvariable $X$ ist log-normalverteilt ($X \sim \text{LogNormal}(\mu, \sigma)$), wenn $\ln(X) \sim \mathcal{N}(\mu, \sigma^2)$ normalverteilt ist.
 
@@ -1241,7 +1286,7 @@ Monte-Carlo-Replikationen sind vollständig unabhängig voneinander (*embarrassi
 </div>
 <div>
 
-![h:400px](./Illustrationen/MonteCarloParallel.jpg)
+![](./Illustrationen/MonteCarloParallel.jpg)
 
 </div>
 </div>
@@ -1278,7 +1323,7 @@ $$S_k = S_{k-1} + (x_k - M_{k-1}) \cdot (x_k - M_k)$$
 
 ---
 
-### Parallele Aggregation: Chan-Merge-Formel (1979)
+### Parallele Aggregation: Chan-Merge-Formel (1979) *(Deep Dive / Referenz)*
 
 Für parallele Monte-Carlo-Simulationen auf Multi-Core-CPUs leiteten Chan, Golub & LeVeque (1979) eine exakte Fusionsformel für zwei Teilstichproben $A$ und $B$ her:
 
@@ -1293,7 +1338,7 @@ $$S = S_A + S_B + \delta^2 \cdot \frac{n_A \cdot n_B}{n}$$
 
 ---
 
-### `ParallelWelfordAccumulator`: Lokale Akkumulation
+### `ParallelWelfordAccumulator`: Lokale Akkumulation *(Deep Dive / Referenz)*
 
 Ermöglicht die numerisch stabile Ein-Pass-Berechnung von Mittelwert und Varianz für jeden Thread:
 
@@ -1318,7 +1363,7 @@ public class ParallelWelfordAccumulator
 
 ---
 
-### `ParallelWelfordAccumulator`: Chan-Merge
+### `ParallelWelfordAccumulator`: Chan-Merge *(Deep Dive / Referenz)*
 
 Führt die Teilakkumulatoren zweier Threads exakt und verlustfrei zusammen:
 
@@ -1424,12 +1469,14 @@ In der Praxis existieren kontinuierliche Physik und diskrete Ereignisse selten g
 
 ---
 
-### Hands-on Labor: Termin 09 – Pick your Track!
+### Hausübung Termin 09: Diskrete Ereignissimulation (DES)
+
+**Stufe 1 (Basisaufgabe `1.1`–`1.3` für alle Teams auf `DiscreteEventSimulation.sln`):** Wartepuffer $K$ & Little's Gesetz, Box-Muller Log-Normal & Monte-Carlo ([Aufgabenblatt 09](../../Uebungen/Termin_09_Diskrete_Systeme_DES/Aufgabenblatt.md)) $\to$ **Stufe 2 (Vertiefung – Wahl: Track A ODER Track B, 10 Pkt.):**
 
 <div class="columns">
 <div class="two">
 
-**Track A: Lackierstraße M/M/c (Industrie)**
+#### Stufe 2 – Track A: Lackierstraße M/M/c (Industrie)
 - **Szenario:** Automobil-Lackierstraße ($c = 3$)
 - Puffer mit Blocking ($K = 25$) & Abweisung
 - Prioritätswarteschlange (Express vs. Standard)
@@ -1439,7 +1486,7 @@ In der Praxis existieren kontinuierliche Physik und diskrete Ereignisse selten g
 </div>
 <div class="two">
 
-**Track B: Theme Park Queue (Game)**
+#### Stufe 2 – Track B: Theme Park Queue (Game)
 - **Szenario:** Achterbahn-Warteschlangen-Rush
 - Kundenströme mit stochastischen Spitzen
 - VIP-Fastpass-Prio mit `PriorityQueue`
@@ -1448,9 +1495,5 @@ In der Praxis existieren kontinuierliche Physik und diskrete Ereignisse selten g
 
 </div>
 </div>
-
-> [!TIP]
-> **Arbeitsauftrag:** Bearbeiten Sie im 2er-Team **GENAU EINEN** der beiden Tracks!
-> Aufgabenstellung & Vorlagen: [Aufgabenblatt Termin 09](../../Uebungen/Termin_09_Diskrete_Systeme_DES/Aufgabenblatt.md).
 
 

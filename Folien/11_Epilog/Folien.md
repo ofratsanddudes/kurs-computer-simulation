@@ -96,7 +96,7 @@ Im Verlauf des Semesters haben wir vier grundlegende Paradigmen der mathematisch
 
 Das Zusammenspiel von **Zeitachse** (statisch, kontinuierlich, diskret) und **Zustandsraum** (kontinuierlich, diskret, hybrid) spannt das Spektrum aller Modellierungsarten auf:
 
-![w:1150 center](./Diagramme/Modellierungsmatrix.svg)
+![](./Diagramme/Modellierungsmatrix.svg)
 
 ---
 
@@ -327,7 +327,7 @@ Leitfragen für Ihr Industrieprojekt zur Identifikation des passenden Modellieru
 
 ### Entscheidungsbaum: Welches Paradigma wählen? (2/2)
 
-![w:1000 center](./Diagramme/Entscheidungsbaum_Modellarten.svg)
+![](./Diagramme/Entscheidungsbaum_Modellarten.svg)
 
 > **Praxis-Tipp:** Beginnen Sie immer mit dem einfachsten Modell (z.B. kontinuierliche Punktmasse). Erweitern Sie erst dann auf diskrete Zustände oder hybride Kontakte, wenn die Validierung Lücken zeigt.
 
@@ -370,7 +370,7 @@ In modernen Industrieunternehmen existiert selten nur ein einziges Modell für e
 
 Die Modellkette im Projektfortschritt von der Konzeption bis zum digitalen Zwilling:
 
-![w:1100 center](./Diagramme/Detailgrad_Projektfortschritt.svg)
+![](./Diagramme/Detailgrad_Projektfortschritt.svg)
 
 - **Konzeptphase:** Geringe Ordnung, maximale Iterationsgeschwindigkeit
 - **Detailphase:** Höchste physikalische Wiedergabetreue für Zulassung und Absicherung
@@ -523,7 +523,7 @@ $$ \Delta t < \frac{2}{\omega_{\max}} $$
 
 Vergleich zwischen numerischer Divergenz und stabiler Lösung bei DGL-Integration:
 
-![w:1000 center](./Diagramme/Numerische_Divergenz_vs_Stabil.svg)
+![](./Diagramme/Numerische_Divergenz_vs_Stabil.svg)
 
 > **Merksatz:** Numerische Instabilität ist kein Fehler der Modellphysik, sondern eine Eigenschaft des diskreten Lösungsalgorithmus bei ungeeigneter Schrittweite!
 
@@ -558,7 +558,7 @@ In interaktiven Simulationsprogrammen müssen Berechnungslogik und Visualisierun
 
 Architektur der thread-sicheren Entkopplung von Physikschleife und WPF-Rendering:
 
-![w:1150 center](./Diagramme/Thread_Architektur_Simulation.svg)
+![](./Diagramme/Thread_Architektur_Simulation.svg)
 
 > **Wichtig:** Niemals rechenintensive Integrationsschleifen direkt im WPF-UI-Thread ausführen! Das führt zum sofortigen Einfrieren der GUI und unkontrollierbaren Zeitschritten.
 
@@ -603,7 +603,7 @@ while (simulating) {
 
 ---
 
-## 11.4: Digitaler Zwilling in der Praxis
+## 11.4: Digitaler Zwilling in der Praxis *(Ausblick Master & Industrie)*
 
 Dieser Abschnitt umfasst die folgenden Inhalte:
 
@@ -637,14 +637,14 @@ Ein Simulationsmodell allein ist noch kein Digitaler Zwilling. Erst die Verknüp
 - Messdaten kalibrieren kontinuierlich das physikalische Modell.
 - Modell berechnet optimierte Sollwerte oder prädiziert Ausfälle und steuert aktiv nach.
 
-![w:540](./Diagramme/Kopplung_Realsystem_DigitalerZwilling.svg)
+![](./Diagramme/Kopplung_Realsystem_DigitalerZwilling.svg)
 
 </div>
 </div>
 
 ---
 
-### Co-Simulation mit FMI / FMU (1/2)
+### Co-Simulation mit FMI / FMU (1/2) *(Deep Dive / Ausblick)*
 
 In realen Industrieanlagen stammen Teilsysteme aus unterschiedlichen Domänen und Werkzeugen:
 
@@ -678,18 +678,18 @@ In realen Industrieanlagen stammen Teilsysteme aus unterschiedlichen Domänen un
 
 ---
 
-### Co-Simulation mit FMI / FMU (2/2)
+### Co-Simulation mit FMI / FMU (2/2) *(Deep Dive / Ausblick)*
 
 Master-Slave-Architektur bei der Co-Simulation mechatronischer Gesamtsysteme:
 
-![w:680 center](./Diagramme/FMI_CoSimulation_Architektur.svg)
+![](./Diagramme/FMI_CoSimulation_Architektur.svg)
 
 - **Master-Aufgaben:** Zeitschritt-Koordination, Signalverteilung und Fehlerüberwachung
 - **Vorteil:** Jede Teildomäne rechnet mit dem optimal angepassten Solver (z.B. implizit für Hydraulik, RK4 für Mechanik)
 
 ---
 
-### Virtuelle Inbetriebnahme (VIBN) & HiL (1/2)
+### Virtuelle Inbetriebnahme (VIBN) & HiL (1/2) *(Deep Dive / Ausblick)*
 
 Bevor eine Sondermaschine physisch gebaut wird, spart die virtuelle Inbetriebnahme enorme Kosten und Projektrisiken:
 
@@ -718,11 +718,11 @@ Bevor eine Sondermaschine physisch gebaut wird, spart die virtuelle Inbetriebnah
 
 ---
 
-### Virtuelle Inbetriebnahme (VIBN) & HiL (2/2)
+### Virtuelle Inbetriebnahme (VIBN) & HiL (2/2) *(Deep Dive / Ausblick)*
 
 Hardware-in-the-Loop Systemarchitektur für die industrielle Maschinenabnahme:
 
-![w:540 center](./Diagramme/VIBN_Systemarchitektur.svg)
+![](./Diagramme/VIBN_Systemarchitektur.svg)
 
 - **Reale SPS:** Unveränderter Serien-Steuerungscode auf Original-Zielhardware
 - **Echtzeit-Simulationsrechner:** Emuliert Motoren, Zylinder, Sensoren und Lastprofile
@@ -730,7 +730,7 @@ Hardware-in-the-Loop Systemarchitektur für die industrielle Maschinenabnahme:
 
 ---
 
-### KI-Surrogatmodelle & Physics-Informed Neural Networks
+### KI-Surrogatmodelle & Physics-Informed Neural Networks *(Deep Dive / Ausblick)*
 
 Komplexe FEM- oder CFD-Simulationen benötigen oft Stunden – unmöglich für die Echtzeitüberwachung an der Maschine:
 
@@ -767,9 +767,9 @@ Dieser Abschnitt umfasst die folgenden Inhalte:
 
 ---
 
-### Kriterien für eine erfolgreiche Projektarbeit (1/2)
+### Kriterien für Ihr Code-Portfolio & zukünftige F&E-Projekte (1/2)
 
-Für die Umsetzung Ihrer simulationsbezogenen Semesteraufgabe gelten folgende Qualitätsmaßstäbe:
+Für Ihr 10-teiliges C#-Simulations-Portfolio, zukünftige F&E-Projekte und Ihre Bachelorarbeit gelten folgende Qualitätsmaßstäbe:
 
 <div class="columns top">
 <div>
@@ -876,7 +876,7 @@ Häufige Fehlerquellen in Studierendenprojekten und wie Sie diese vermeiden:
 <div class="columns top">
 <div>
 
-![w:540](./Diagramme/Teufelskreis_Numerische_Instabilitaet.svg)
+![](./Diagramme/Teufelskreis_Numerische_Instabilitaet.svg)
 
 </div>
 <div>
@@ -974,10 +974,10 @@ Die Benotung erfolgt vollständig semesterbegleitend aus zwei transparenten Säu
 </div>
 <div class="two">
 
-**Säule 2: Übungen & Diskurs (60 %)**
-- **30 % C#-Code-Portfolio:** 10 wöchentliche Übungen (Track A oder B, Goldene Regel, MSTests)
-- **15 % Showcase-Präsentationen:** Live-Vorführung der Lösungen im Rotationsprinzip
-- **15 % Peer-Review:** Konstruktiv-kritische Fachfragen aus dem Plenum
+**Säule 2: Übungen & Showcase (60 %)**
+- **40 % C#-Code-Portfolio:** 10 Hausübungen à 4 % (Stufe 1 + 2, MSTests)
+- **20 % Live-Showcase & Defense:** Live-Demo, Code-Erklärung & Stresstest
+- **Fokus auf Eigenleistung:** Code-Qualität und mündliche Auskunftsfähigkeit
 
 </div>
 </div>
@@ -1046,7 +1046,7 @@ Mit dem Abschluss dieses Kurses besitzen Sie ein fundamentales Methoden- und Sof
 
 Der durchgängige Weg von der Problemstellung zur simulationsgestützten Erkenntnis:
 
-![w:640 center](./Diagramme/Simulationsprozess_Synthese.svg)
+![](./Diagramme/Simulationsprozess_Synthese.svg)
 
 - **Systemsimulation ist die Schlüsseltechnologie** moderner Mechatronik und Automatisierungstechnik.
 - Sie ermöglicht gefahrloses Testen, frühe Optimierung und fehlerfreie Inbetriebnahme komplexer Anlagen!

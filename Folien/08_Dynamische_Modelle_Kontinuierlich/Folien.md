@@ -25,33 +25,34 @@ math: mathjax
 
 ---
 
-### Showcase & Peer Review: Termin 07 (Statik & Cholesky-FEM)
+### Live-Showcase & Code-Defense: Termin 07
+
+Präsentation der Hausübung aus Termin 07 (**Stufe 1: Basisaufgabe** + **Stufe 2: Track A oder B**, [Aufgabenblatt 07](../../Uebungen/Termin_07_Statik_FEM_Cholesky/Aufgabenblatt.md)):
 
 <div class="columns">
 <div class="two">
 
-**Track A: Portalkran-FEM-Statik (Industrie)**
+#### Stufe 2 – Track A: Portalkran-FEM-Statik (Industrie)
 - Erweckung der T03-Geometrie via Cholesky
 - Wandernde Kranlast ($F_{\text{Last}} = 50\,\text{kN}$)
 - Überhöhte Verformungsdarstellung im Canvas
 - Reale Normalkräfte (Zug blau, Druck rot)
-- *Peer Review:* Euler-Knicknachweis & Kondition
+- *Code-Defense:* Euler-Knicknachweis & Kondition
 
 </div>
 <div class="two">
 
-**Track B: Bridge Constructor Engine (Game)**
+#### Stufe 2 – Track B: Bridge Constructor Engine (Game)
 - Interaktive Fachwerkbrücke mit LKW-Überfahrt
 - Schrittweise Cholesky-LGS-Lösung
 - Bauteilversagen bei Grenzspannung $S_{\text{krit}}$
 - Physikalischer Kollaps & Trägerwerk-Einsturz
-- *Peer Review:* Singularität bei Stab-Ausfall
+- *Code-Defense:* Singularität bei Stab-Ausfall
 
 </div>
 </div>
 
-> [!NOTE]
-> **Showcase & Plenumsdiskussion:** Live-Demonstration beider Tracks auf der Beamer-Bühne. Fokus: Numerische Stabilität, Konditionszahl $\kappa(\mathbf{K})$ und Cholesky-Performance. Details: [Aufgabenblatt Termin 07](../../Uebungen/Termin_07_Statik_FEM_Cholesky/Aufgabenblatt.md).
+> **Code-Defense (Säule 2b, 20 %):** Live-Demonstration am Beamer. Fokus: Numerische Stabilität, Konditionszahl $\kappa(\mathbf{K}_{ff})$ und Singularität bei Unterbestimmtheit.
 
 ---
 
@@ -59,10 +60,24 @@ math: mathjax
 
 Dieser Abschnitt umfasst die folgenden Inhalte:
 
+- Brücke zu Termin 01 (Euler) & Termin 07 (Statik) im Gesamtbild
 - Definition von kontinuierlichen dynamischen Modellen
 - Die Zustandsraumdarstellung
 - Umwandlung von Differentialgleichungen höherer Ordnung
 - Analytische vs. numerische Lösungsansätze
+
+---
+
+### Rückblick & Brücke: Wo stehen wir in der Vorlesung?
+
+In **Termin 07** haben wir Systeme im statischen Ruhezustand ($\sum \vec{F} = \mathbf{0} \implies \mathbf{K}\mathbf{u} = \mathbf{f}$) gelöst – was passiert jedoch, wenn Kräfte **nicht** im Gleichgewicht stehen?
+
+- **Vom Gleichgewicht (Termin 07) zur Bewegung (Termin 08):**
+  - Sobald eine resultierende Kraft wirkt (z.B. Lastsprung am Servomotor, Zünden eines Raketentriebwerks), beschleunigt die Masse gemäß Newton ($\sum \vec{F} = m \cdot \ddot{\mathbf{x}} \neq \mathbf{0}$).
+  - Aus dem algebraischen Gleichungssystem wird ein **System gekoppelter Differentialgleichungen (ODEs)** im Zustandsraum: $\dot{\mathbf{x}}(t) = \mathbf{f}(t, \mathbf{x}(t), \mathbf{u}(t))$.
+- **Brücke zurück zu Termin 01, 04 und 06:**
+  - In **Termin 01** sahen wir bereits, wie schnell der naive Euler-Integrator bei Schwingungen explodiert.
+  - Heute entwickeln wir eine modulare **S-Function-Solver-Architektur** mit **Runge-Kutta 4 (RK4)** und geschlossenem **PID-Regelkreis** (inkl. Anti-Windup) und plotten die Trajektorien live mit `ScottPlot 5` (T04).
 
 ---
 
@@ -160,7 +175,7 @@ $$ m \ddot{y}(t) + d \dot{y}(t) + k y(t) = F(t) $$
 </div>
 <div>
 
-![width: 1000px](./Illustrationen/Bewegungsgleichung.jpg)
+![](./Illustrationen/Bewegungsgleichung.jpg)
 
 </div>
 </div>
@@ -258,7 +273,7 @@ $$ x_{k+1} = x_k + h \cdot f(t_k, x_k) $$
 </div>
 <div>
 
-![w:500](./Diagramme/Euler%20-%20Explizit.svg)
+![](./Diagramme/Euler%20-%20Explizit.svg)
 
 </div>
 </div>
@@ -282,7 +297,7 @@ $$ x_{k+1} = x_k + h \cdot f(t_{k+1}, x_{k+1}) $$
 </div>
 <div>
 
-![w:500](./Diagramme/Euler%20-%20Implizit.svg)
+![](./Diagramme/Euler%20-%20Implizit.svg)
 
 </div>
 </div>
@@ -479,7 +494,7 @@ $$ y_{k+1} = y_k + h \cdot v_{k+1} $$
 
 ---
 
-### Symplektische Eigenschaft & Phasenraumvolumenerhaltung
+### Symplektische Eigenschaft & Phasenraumvolumenerhaltung *(Deep Dive / Theorie)*
 
 Warum ist Euler-Cromer in der mechatronischen Simulation so populär?
 
@@ -774,7 +789,7 @@ Jeder Block deklariert seine Zustände, Ein- und Ausgänge im Konstruktor.
 
 ---
 
-### Beispiel: `ConstantBlock`
+### Beispiel: `ConstantBlock` *(Deep Dive / Referenz)*
 
 Ein Block, der einen konstanten Wert ausgibt. Er hat keine Zustände und keine Eingänge.
 
@@ -800,7 +815,7 @@ public class ConstantBlock : Block
     }
 
     public override void CalculateOutputs(double time, 
-        double[] cStates, double[] dStates, double[] inputs, double[] outputs)
+        double[] cStates, double[] inputs, double[] outputs)
     {
         outputs[0] = Value;
     }
@@ -835,7 +850,7 @@ Algebraische Blöcke haben keine Zustände. Ihr Ausgang `y` hängt direkt von de
 
 ---
 
-### Beispiel: `GainBlock`
+### Beispiel: `GainBlock` *(Deep Dive / Referenz)*
 
 <div class="columns">
 <div class="two">
@@ -873,7 +888,7 @@ public class GainBlock : Block
 
 ---
 
-### Beispiel: `AddBlock`
+### Beispiel: `AddBlock` *(Deep Dive / Referenz)*
 
 <div class="columns">
 <div class="two">
@@ -934,7 +949,7 @@ Der `IntegrateBlock` ist der entscheidende Baustein zur Modellierung dynamischer
 
 ---
 
-### Beispiel: `IntegrateBlock`
+### Beispiel: `IntegrateBlock` *(Deep Dive / Referenz)*
 
 Der zentrale Block zur Modellierung von Dynamik. Er integriert das Eingangssignal über die Zeit.
 
@@ -959,7 +974,7 @@ public class IntegrateBlock : Block
 
 ---
 
-### `IntegrateBlock`: Implementierung
+### `IntegrateBlock`: Implementierung *(Deep Dive / Referenz)*
 
 <div class="columns">
 <div class="">
@@ -1124,7 +1139,7 @@ Die Klasse `EulerExplicitSolver` implementiert einen einfachen Algorithmus für 
 </div>
 <div class="two">
 
-![h:470px center](./Diagramme/Simulationsschleife_Explizit.svg)
+![](./Diagramme/Simulationsschleife_Explizit.svg)
 
 </div>
 </div>
@@ -1251,7 +1266,7 @@ Wird das Modell mit dem `EulerExplicitLoopSolver` ausgeführt, kann die algebrai
 
 ---
 
-### Praktische Anwendung: **Nichtlineares elektrisches Netzwerk** (1/2)
+### Praktische Anwendung: **Nichtlineares elektrisches Netzwerk** (1/2) *(Deep Dive)*
 
 **Beispiel: Spannungsteiler mit nichtlinearem Widerstand**
 
@@ -1268,7 +1283,7 @@ Der Ausgang $V_{out}$ hängt direkt von sich selbst ab.
 
 ---
 
-### Praktische Anwendung: **Nichtlineares elektrisches Netzwerk** (2/2)
+### Praktische Anwendung: **Nichtlineares elektrisches Netzwerk** (2/2) *(Deep Dive)*
 
 Die Auflösung der algebraischen Schleife erfordert eine Fixpunktiteration in jedem Zeitschritt:
 
@@ -1278,11 +1293,11 @@ Die Auflösung der algebraischen Schleife erfordert eine Fixpunktiteration in je
 4. Vergleiche $V_{out}'$ mit dem geschätzten $V_{out}$.
 5. Wenn $|V_{out}' - V_{out}| > \text{Toleranz}$, passe Schätzung an und wiederhole ab Schritt 2.
 
-![w:950 center](./Diagramme/Algebraische_Schleife_Praxis.svg)
+![](./Diagramme/Algebraische_Schleife_Praxis.svg)
 
 ---
 
-### Beispiel: **Diode** als nichtlineares Element (1/2)
+### Beispiel: **Diode** als nichtlineares Element (1/2) *(Deep Dive)*
 
 Ein klassisches Beispiel für ein Bauteil mit nichtlinearer Kennlinie ist die Halbleiterdiode. Ihr Verhalten lässt sich durch die **Shockley-Gleichung** beschreiben.
 
@@ -1302,7 +1317,7 @@ Diese transzendente Gleichung kann nicht analytisch nach $V_{out}$ umgeformt wer
 
 ---
 
-### Beispiel: **Diode** als nichtlineares Element (2/2)
+### Beispiel: **Diode** als nichtlineares Element (2/2) *(Deep Dive)*
 
 **Parameter der Shockley-Gleichung:**
 
@@ -1318,7 +1333,7 @@ Die Auflösung der algebraischen Schleife erfordert in jedem Zeitschritt ein num
 
 ---
 
-### Praktische Anwendung: **Beschleunigung im Fluid** (Added Mass) (1/2)
+### Praktische Anwendung: **Beschleunigung im Fluid** (Added Mass) (1/2) *(Deep Dive)*
 
 **Beispiel: Beschleunigung eines Körpers (z.B. U-Boot) in Wasser**
 
@@ -1335,7 +1350,7 @@ $$ m \cdot a = F_{Antrieb} - c \cdot v^2 - m_{Zusatz} \cdot a $$
 
 ---
 
-### Praktische Anwendung: Beschleunigung im Fluid (2/2)
+### Praktische Anwendung: Beschleunigung im Fluid (2/2) *(Deep Dive)*
 
 Die algebraische Schleife entsteht durch die wechselseitige Abhängigkeit von Kraft und Beschleunigung:
 
@@ -1347,9 +1362,9 @@ Die algebraische Schleife entsteht durch die wechselseitige Abhängigkeit von Kr
 
 ---
 
-### Beschleunigung im Fluid: Blockdiagramm mit Added Mass
+### Beschleunigung im Fluid: Blockdiagramm mit Added Mass *(Deep Dive)*
 
-![w:1150 center](./Diagramme/Algebraische_Schleife_Mechanik.svg)
+![](./Diagramme/Algebraische_Schleife_Mechanik.svg)
 
 ---
 
@@ -1379,7 +1394,7 @@ Implementiert den impliziten Euler-Algorithmus.
 
 ---
 
-### Simulationsschleife in `EulerImplicitSolver`
+### Simulationsschleife in `EulerImplicitSolver` *(Deep Dive / Referenz)*
 
 Der implizite Euler löst in jedem Zeitschritt eine Fixpunktiteration:
 
@@ -1397,13 +1412,13 @@ Der implizite Euler löst in jedem Zeitschritt eine Fixpunktiteration:
 
 ---
 
-### Simulationsschleife in `EulerImplicitSolver` (Ablauf)
+### Simulationsschleife in `EulerImplicitSolver` (Ablauf) *(Deep Dive / Referenz)*
 
-![w:1180 center](./Diagramme/Simulationsschleife_Implizit.svg)
+![](./Diagramme/Simulationsschleife_Implizit.svg)
 
 ---
 
-### Der `EulerImplicitLoopSolver`
+### Der `EulerImplicitLoopSolver` *(Deep Dive / Referenz)*
 
 <div class="columns">
 <div class="two">
@@ -1574,7 +1589,7 @@ Setzt man $z = i\beta$ mit $\beta = \omega_0 h > 0$ in die Stabilitätsfunktione
 
 ### Konvergenzordnung im Vergleich (Log-Log-Plot)
 
-![bg right:55% width:650px](./Illustrationen/Solver_Konvergenzordnung.png)
+![bg right:55%](./Illustrationen/Solver_Konvergenzordnung.png)
 
 - **Doppelt-logarithmische Skala:**
   $$\log_{10}(\text{Fehler}) = p \cdot \log_{10}(h) + C$$
@@ -1651,7 +1666,7 @@ Dieser Abschnitt demonstriert die Systemsimulation an einem Kernproblem der Auto
 - **Mechanischer Rotor:** $J \dot{\omega}(t) = k_m \cdot i(t) - d \cdot \omega(t) \implies J \dot{\omega} = -\frac{k_m k_e + d R}{R} \omega + \frac{k_m}{R} u$
 - **PT1-Parameter:** $T_m = \frac{J \cdot R}{k_m k_e + d \cdot R} = 0{,}05\,\mathrm{s}, \quad K_m = \frac{k_m}{k_m k_e + d \cdot R} = 2{,}5\,\frac{\mathrm{rad}}{\mathrm{s \cdot V}}$
 
-![w:920 center](./Diagramme/DC_Motor_Ersatzschaltbild.svg)
+![](./Diagramme/DC_Motor_Ersatzschaltbild.svg)
 
 ---
 
@@ -1691,7 +1706,7 @@ $$\mathbf{A} = \begin{pmatrix} 0 & 1 \\ 0 & -\frac{1}{T_m} \end{pmatrix}, \quad 
 
 ### DC-Servomotor: Blockschaltbild des Regelkreises
 
-![w:1150 center](./Diagramme/Blockschaltbild_DCServo.svg)
+![](./Diagramme/Blockschaltbild_DCServo.svg)
 
 ---
 
@@ -1713,7 +1728,7 @@ Wird ein Sollwertsprung $w(t) = \theta_{\text{soll}}$ vorgegeben:
 </div>
 <div class="two">
 
-![w:480](./Illustrationen/AntiWindup_Vergleich.png)
+![](./Illustrationen/AntiWindup_Vergleich.png)
 
 *Mit Anti-Windup Clamping (grün) reagiert die Achse aperiodisch stabil ohne 60 % Überschwingen (rot).*
 
@@ -1731,26 +1746,29 @@ public class ClosedLoopMotorBlock : Block
     public double Tm = 0.05, Km = 2.5, UMax = 10.0;
     public double TargetPosition = 1.0; // Sollwert: 1 Radian Sprung
 
-    public ClosedLoopMotorBlock()
+    public ClosedLoopMotorBlock(string name = "DCServo") : base(name)
     {
         // 3 kontinuierliche Zustände: theta, omega, x_I
-        ContinuousStates.AddRange(new[] { 0.0, 0.0, 0.0 });
+        ContinuousStates.Add(new StateDeclaration("Theta"));
+        ContinuousStates.Add(new StateDeclaration("Omega"));
+        ContinuousStates.Add(new StateDeclaration("IntegralError"));
     }
 }
 ```
 
 - Kapselt die Streckenparameter, Reglerverstärkungen und Begrenzungsschranken.
-- Drei Zustandsvariablen werden im gemeinsamen Vektor des Modells registriert.
+- *(Hinweis: In der Laborvorlage `Termin_08` ist diese Block-Schnittstelle noch kompakter als `ISFunction` mit `ComputeDerivatives(double t, double[] x, double[] u)` zusammengefasst).*
 
 ---
 
 ### C#-Implementierung: `ClosedLoopMotorBlock` (Dynamik)
 
 ```csharp
-public override void CalculateDerivatives(double time)
+public override void CalculateDerivatives(
+    double time, double[] cStates, double[] inputs, double[] derivatives)
 {
-    double theta = ContinuousStates[0], omega = ContinuousStates[1];
-    double xI = ContinuousStates[2], error = TargetPosition - theta;
+    double theta = cStates[0], omega = cStates[1];
+    double xI = cStates[2], error = TargetPosition - theta;
     double uRaw = Kp * error + xI - Kd * omega; // D-Anteil auf Istwert
     double uSat = Math.Clamp(uRaw, -UMax, UMax);
 
@@ -1758,9 +1776,9 @@ public override void CalculateDerivatives(double time)
     bool isSat = Math.Abs(uRaw) >= UMax, sameSign = (error * uRaw) > 0.0;
     double dxI = (isSat && sameSign) ? 0.0 : Ki * error;
 
-    Derivatives[0] = omega;
-    Derivatives[1] = (-1.0 / Tm) * omega + (Km / Tm) * uSat;
-    Derivatives[2] = dxI;
+    derivatives[0] = omega;
+    derivatives[1] = (-1.0 / Tm) * omega + (Km / Tm) * uSat;
+    derivatives[2] = dxI;
 }
 ```
 
@@ -1793,7 +1811,7 @@ while (solver.Time <= 0.6) // 600 ms Regelung
 </div>
 <div class="two">
 
-![w:460](./Screenshots/ClosedLoop_RK4_StepResponse.png)
+![](./Screenshots/ClosedLoop_RK4_StepResponse.png)
 
 </div>
 </div>
@@ -1812,22 +1830,24 @@ while (solver.Time <= 0.6) // 600 ms Regelung
 
 ---
 
-### Hands-on Labor: Termin 08 – Pick your Track!
+### Hausübung Termin 08: DGL-Solver, S-Functions & Anti-Windup
+
+**Stufe 1 (Basisaufgabe `1.1`–`1.3` für alle Teams auf `SFunctionSimulation.sln`):** Expliziter Euler vs. RK4 Stabilitätsgrenze, `PidController` & Anti-Windup-Overlay ([Aufgabenblatt 08](../../Uebungen/Termin_08_DGL_und_SFunctions/Aufgabenblatt.md)) $\to$ **Stufe 2 (Vertiefung – Wahl: Track A ODER Track B, 10 Pkt.):**
 
 <div class="columns">
 <div class="two">
 
-**Track A: DC-Servomotor (Industrie)**
+#### Stufe 2 – Track A: DC-Servomotor (Industrie)
 - **Szenario:** Vorschubachse Werkzeugmaschine
-- DGL-System: Strom $i(t)$, Drehzahl $\omega(t)$, Winkel $\theta(t)$
-- 4-stufiger RK4-Solver ($h = 1\,\text{ms}$)
-- Lastsprung bei Fräskontakt ($M_{\text{Last}} = 0{,}5\,\text{Nm}$)
-- Anti-Windup Clamping gegen Überschwingen
+- DGL-System: $i_A(t), \omega(t), \theta(t), x_i(t)$ + Wicklungstemperatur $T_{\text{Cu}}(t)$
+- Verfahrensvergleich: Euler (RK1) vs. Heun (RK2) vs. RK4
+- Lastsprung bei Fräskontakt ($M_{\text{Last}} = 2{,}5\,\text{Nm}$)
+- Anti-Windup Clamping (`PidController`) & thermisches Derating
 
 </div>
 <div class="two">
 
-**Track B: SpaceX Falcon Hop (Game)**
+#### Stufe 2 – Track B: SpaceX Falcon Hop (Game)
 - **Szenario:** Raketen-Schwebeflug & Landung
 - Gekoppelte Translation ($y, v$) & Rotation ($\phi, \omega$)
 - RK4-Flugphysik mit Gravitation & Trägheit
@@ -1836,8 +1856,4 @@ while (solver.Time <= 0.6) // 600 ms Regelung
 
 </div>
 </div>
-
-> [!TIP]
-> **Arbeitsauftrag:** Bearbeiten Sie im 2er-Team **GENAU EINEN** der beiden Tracks!
-> Aufgabenstellung & Vorlagen: [Aufgabenblatt Termin 08](../../Uebungen/Termin_08_DGL_und_SFunctions/Aufgabenblatt.md).
 

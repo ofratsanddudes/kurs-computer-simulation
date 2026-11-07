@@ -3,9 +3,9 @@
 **Lehrveranstaltung:** Systemsimulation / Digitaler Zwilling  
 **Studiengang:** B.Sc. Automatisierungstechnik, 5. Semester  
 **Institution:** Fachhochschule Oberösterreich – Campus Wels  
-**Bearbeitungsform:** 
-- **Stufe A (In-Class Sprint):** Einzelarbeit oder 2er-Tandem (Labor, 60 min)
-- **Stufe B (Homework Extension):** Festes 2er-Team (1 Woche, ca. 2–3 h pro Person)
+**Bearbeitungsform:** Zweistufige Hausübung im festen 2er-Team (1 Woche):
+- **Stufe 1 (Basisaufgabe):** Gemeinsames Fundament auf der C#-Vorlage (Richtwert ca. 60 Min. zu Hause)
+- **Stufe 2 (Vertiefungsaufgabe / Track-Ausbau):** Wahlmodell Track A (Industrie) **ODER** Track B (Simulation Game) (Richtwert ca. 3–4 h zu Hause)
 **Technologie-Vorgabe:** C# 12 / .NET 8 oder .NET 10, WPF mit `System.Windows.Media.Imaging.WriteableBitmap` und `Image`-Control.  
 > [!CAUTION]
 > **Vorgreif-Sperre für Termin 02:**  
@@ -53,45 +53,40 @@ Wird diese Zeitschrittgrenze auch nur minimal überschritten, kommt es zu einem 
 
 ---
 
-## 3. Stufe A: In-Class Sprint (60 Minuten)
+## 3. Stufe 1: Basisaufgabe (Gemeinsames Fundament auf der C#-Vorlage, Richtwert ca. 60 Min.)
 
-**Thema:** Heatmap-Renderer in WPF `WriteableBitmap`  
-**Ziel:** Erstellen Sie in 60 Minuten eine flüssig laufende, farbcodierte 2D-Wärmeleitungssimulation auf einem $128 \times 128$ Pixel-Gitter.
+**Basis-Projekt:** Öffnen Sie die bereitgestellte Projektvorlage `Vorlage/PixelHeatFDM.sln` (`HeatGrid.cs`, `BitmapHeatRenderer.cs`, `MainWindow.xaml.cs`).  
+Die Vorlage enthält bereits ein lauffähiges $128 \times 128$ Basis-Gitter (`float[,] _tCurrent`, `_tNext`) im Format `PixelFormats.Bgra32` auf dem Image-Control `HeatImage`.  
+**Ziel der Basisaufgabe (Stufe 1):** Analysieren Sie das Stabilitätsverhalten und erweitern Sie die Basis-Vorlage um eine vorberechnete **256-Stufen-Look-Up-Table (LUT)** sowie **interaktives Maus-Zeichnen von Wärmequellen und Isolator-Wänden** (als direktes Fundament für Stufe 2 Track A und Track B!).
 
-### Aufgabenstellung:
-1. Erstellen Sie ein leeres WPF-Projekt `Sprint_WriteableBitmapFDM`.
-2. Platzieren Sie im Hauptfenster ein `Image`-Element mit Pixelabmessung $128 \times 128$, gestreckt auf $512 \times 512$ Pixel (`RenderOptions.BitmapScalingMode="NearestNeighbor"`):
-   ```xml
-   <Image x:Name="PixelDisplay" Width="512" Height="512"/>
-   ```
-3. Initialisieren Sie im Code-Behind eine `WriteableBitmap` im Format `PixelFormats.Bgr32`:
-   ```csharp
-   private readonly WriteableBitmap _bitmap = new(128, 128, 96, 96, PixelFormats.Bgr32, null);
-   private double[,] _tOld = new double[128, 128];
-   private double[,] _tNew = new double[128, 128];
-   private readonly uint[] _pixelBuffer = new uint[128 * 128];
-   ```
-4. **Physik-Initialisierung:**
-   - Grundtemperatur überall: $T = 20{,}0\,^\circ\text{C}$.
-   - Randbedingungen: Alle vier Außenkanten fest auf $T = 20{,}0\,^\circ\text{C}$ (Dirichlet).
-   - Hotspot im Zentrum ($x \in [58, 70], y \in [58, 70]$): Konstante Hitzequelle mit $T = 100{,}0\,^\circ\text{C}$.
-   - Parameter: $a = 1{,}0 \times 10^{-4}\,\text{m}^2/\text{s}$, $\Delta x = 1\,\text{mm} = 0{,}001\,\text{m}$.
-   - Berechnen Sie $\Delta t_{\max} = \frac{\Delta x^2}{4a} = \frac{10^{-6}}{4 \times 10^{-4}} = 0{,}0025\,\text{s}$. Wählen Sie $\Delta t = 0{,}0020\,\text{s}$ ($s = 0{,}20$).
-5. **Color-Mapping:** Implementieren Sie eine Farbpaletten-Funktion `uint GetColor(double temp)`:
-   - $20\,^\circ\text{C} \to$ Blau (`0xFF0000FF`)
-   - $50\,^\circ\text{C} \to$ Cyan / Grün (`0xFF00FF00`)
-   - $80\,^\circ\text{C} \to$ Gelb (`0xFFFFFF00`)
-   - $\ge 100\,^\circ\text{C} \to$ Rot (`0xFFFF0000`)
-6. **Simulations-Schleife:**
-   - Starten Sie einen `DispatcherTimer` mit $30\,\text{ms}$ Intervall.
-   - Berechnen Sie pro Tick einen FDM-Schritt vom inneren Gitter $(1..126, 1..126)$.
-   - Wandeln Sie die Temperaturen in Farb-Integer um und schreiben Sie sie via `_bitmap.Lock()`, `BackBuffer` und `AddDirtyRect` in die Anzeige.
-   - Tauschen Sie die Puffer (`(_tOld, _tNew) = (_tNew, _tOld)`).
-- **Erwartetes Ergebnis:** Eine organisch aufkeimende, runde Wärmewolke mit sauberer Farbabstufung im WPF-Fenster.
+### Aufgabenstellung (auf Basis von `Vorlage/PixelHeatFDM.sln`):
+1. **Aufgabe 1.1 – Code-Walkthrough & Experimenteller Von-Neumann-Stresstest ($s > 0{,}25$):**
+   - Starten Sie `PixelHeatFDM` und führen Sie die bestehenden Unit-Tests (`dotnet test`) aus.
+   - Prüfen Sie die Parameter in `HeatGrid.cs`: $\alpha = 1{,}0 \times 10^{-4}\,\text{m}^2/\text{s}$, $\Delta x = 1\,\text{mm} = 0{,}001\,\text{m} \implies \Delta t_{\text{krit}} = \frac{\Delta x^2}{4\alpha} = 0{,}0025\,\text{s}$.
+   - Erhöhen Sie $\Delta t$ über den Slider schrittweise von $0{,}0020\,\text{s}$ ($s = 0{,}20$) auf $> 0{,}0026\,\text{s}$ ($s > 0{,}26$). Beobachten und erklären Sie das entstehende Schachbrett-Oszillationsmuster bis zum Magenta-Überlauf (`float.IsNaN` / `float.IsInfinity`).
+   - Schalten Sie zwischen **Dirichlet-Rand** (feste $20\,^\circ\text{C}$) und **Neumann-Rand** (adiabat isoliert) um und beobachten Sie den Wärmestau am Rand.
+2. **Aufgabe 1.2 – Performance-Upgrade: $O(1)$ Look-Up-Table (`uint[256]`) in `BitmapHeatRenderer.cs`:**
+   - Aktuell berechnet `BitmapHeatRenderer.MapTemperatureToColor(...)` für jedes der $16\,384$ Pixel pro Frame mehrfach `if/else`-Verzweigungen und Gleitkomma-Divisionen.
+   - Legen Sie in `BitmapHeatRenderer` ein Array `private readonly uint[] _colorLut = new uint[256];` an und befüllen Sie dieses **einmalig im Konstruktor** für die 256 normierten Temperaturstufen ($0 \dots 255$).
+   - Ersetzen Sie den Aufruf in der `Render`-Schleife durch einen direkten $O(1)$-Tabellenzugriff:
+     ```csharp
+     int lutIndex = (int)Math.Clamp((t - minTemp) / range * 255.0f, 0.0f, 255.0f);
+     _pixelBuffer[index++] = float.IsNaN(t) || float.IsInfinity(t) ? 0xFFFF00FFu : _colorLut[lutIndex];
+     ```
+3. **Aufgabe 1.3 – Ortsabhängiges Materialgitter (`AlphaMap`) & Interaktives Maus-Zeichnen:**
+   - Erweitern Sie `HeatGrid` um ein 2D-Array `private readonly float[,] _alphaMap;` (initialisiert mit `Alpha`, wobei in der Literatur oft $a \equiv \alpha = \frac{\lambda}{\rho c_p}$ geschrieben wird), sodass in `Step()` lokal mit $s_{x,y} = \frac{\alpha_{x,y} \cdot \Delta t}{\Delta x^2}$ gerechnet wird.
+   - **Wichtige Physik-Regel für echte adiabate Isolator-Wände ($\alpha_{x,y} = 0$):** Wenn eine Nachbarzelle ein Isolator ist (`_alphaMap[nx, ny] == 0f`), darf kein Wärmestrom in diese Wandzelle abfließen (sonst würde eine auf $20\,^\circ\text{C}$ gehaltene Wandzelle als *Kühlrippe / Wärmesenke* wirken!). Spiegeln Sie daher an Isolator-Nachbarn die eigene Temperatur `tCenter` (lokale Neumann-Bedingung $\frac{\partial T}{\partial n} = 0$):
+     ```csharp
+     float tRight = _alphaMap[x + 1, y] == 0f ? tCenter : _tCurrent[x + 1, y]; // analog für Left, Up, Down
+     ```
+   - Abonnieren Sie auf `HeatImage` (in `MainWindow.xaml` / `MainWindow.xaml.cs`) die Events `MouseDown` und `MouseMove`. Rechnen Sie die Mausposition `Point pos = e.GetPosition(HeatImage)` über die Bildabmessungen (`HeatImage.ActualWidth`, `ActualHeight`) in Gitterkoordinaten `(int gx, int gy)` $\in [0, 127]^2$ um:
+     - **Linke Maustaste gedrückt:** Zeichnen Sie mit einem Pinselradius von 2 Pixeln heiße Quellen ($T = 100\,^\circ\text{C}$) direkt in das laufende Gitter.
+     - **Rechte Maustaste gedrückt:** Zeichnen Sie thermische Isolator-Wände ($\alpha_{x,y} = 0$) ins Gitter und stellen Sie diese im Renderer dunkelgrau (`0xFF404040`) dar.
+- **Erwartetes Ergebnis:** Die Wärmewolke strömt in Echtzeit adiabat (ohne Wärmeverlust an den Wänden) um Ihre per Maus gezeichneten Isolator-Labyrinthe herum!
 
 ---
 
-## 4. Stufe B: Homework Extension (Wahlmodell)
+## 4. Stufe 2: Vertiefungsaufgabe / Track-Ausbau (Wahlmodell: Track A ODER Track B)
 
 > [!IMPORTANT]
 > **Wahlmodell – GENAU EINE Aufgabe (keine Doppelbelastung!):**  
@@ -139,12 +134,12 @@ In Hochleistungs-Servern oder Gaming-PCs führt die Abwärme moderner Multi-Core
   - *Lüfterausfall (Notbetrieb):* Reiner freier Wärmeübergang mit $h = 20\,\text{W/m}^2\text{K}$.
 
 #### Aufgabenstellung Track A:
-1. Implementieren Sie die FDM-Engine mit inhomogenem Gitter ($a_{i,j}$ und $\dot{q}_{i,j}$ matrixbasiert).
-2. Setzen Sie die Robin-Randbedingungen an allen Grenzflächen zwischen Kühlfinne und Luft exakt um.
-3. Fügen Sie der GUI Umschaltknöpfe oder Slider hinzu:
+1. **Arbeitspaket A.1 – Inhomogenes Gitter:** Implementieren Sie die FDM-Engine mit inhomogenem Gitter ($a_{i,j}$ und $\dot{q}_{i,j}$ matrixbasiert).
+2. **Arbeitspaket A.2 – Robin-Randbedingungen:** Setzen Sie die Robin-Randbedingungen an allen Grenzflächen zwischen Kühlfinne und Luft exakt um.
+3. **Arbeitspaket A.3 – Interaktive Lüftersteuerung:** Fügen Sie der GUI Umschaltknöpfe oder Slider hinzu:
    - Umschaltung: Lüfter Normal ($h=250$) vs. Lüfterausfall ($h=20$).
    - Live-Anzeige der CPU-Maximaltemperatur $T_{\max}(t)$ als Text.
-4. **Experimentelle Stabilitätsstudie:**
+4. **Arbeitspaket A.4 – Experimentelle Stabilitätsstudie:**
    - Ermitteln Sie analytisch $\Delta t_{\text{krit}} = \frac{\Delta x^2}{4 a_{\max}}$ für Kupfer ($a_{\max} \approx 1{,}15 \times 10^{-4}\,\text{m}^2/\text{s}$).
    - Verdoppeln Sie im Test $\Delta t$ schrittweise und dokumentieren Sie den exakten Punkt, an dem das Gitter numerisch explodiert.
 
@@ -175,10 +170,10 @@ Klassische zelluläre Physik-Spiele (*Powder Toy*, *Noita*, *Doom Fire*) faszini
    - Mittlere Maustaste / Tastenkürzel: Lokaler Hitzebrenner ($T = 1200\,^\circ\text{C}$).
 
 #### Aufgabenstellung Track B:
-1. Implementieren Sie die FDM-Diffusionsschleife kombiniert mit dem zellulären Partikel-Update.
-2. Bauen Sie ein atmosphärisches Color-Mapping (Black-Body-Radiation: Schwarz $\to$ Dunkelrot $\to$ Orange $\to$ Gelb $\to$ Weiß).
-3. Gewährleisten Sie eine butterweiche Bildrate ($\ge 45\,\text{FPS}$) bei voll interagierendem Gitter über direkten Pointer-Zugriff auf `WriteableBitmap.BackBuffer`.
-4. **Stabilitätsanalyse:** Zeigen Sie, was geschieht, wenn der Diffusionskoeffizient der Hitze über das Stabilitätslimit getrieben wird (Artefakte, Streifenbildung).
+1. **Arbeitspaket B.1 – FDM- & Zellulärer-Automat-Loop:** Implementieren Sie die FDM-Diffusionsschleife kombiniert mit dem zellulären Partikel-Update.
+2. **Arbeitspaket B.2 – Black-Body-Color-Mapping:** Bauen Sie ein atmosphärisches Color-Mapping (Black-Body-Radiation: Schwarz $\to$ Dunkelrot $\to$ Orange $\to$ Gelb $\to$ Weiß).
+3. **Arbeitspaket B.3 – Pointer-Performance & Maus-Werkzeuge:** Gewährleisten Sie eine butterweiche Bildrate ($\ge 45\,\text{FPS}$) bei voll interagierendem Gitter über direkten Pointer-Zugriff auf `WriteableBitmap.BackBuffer`.
+4. **Arbeitspaket B.4 – Stabilitätsanalyse:** Zeigen Sie, was geschieht, wenn der Diffusionskoeffizient der Hitze über das Stabilitätslimit getrieben wird (Artefakte, Streifenbildung).
 
 ---
 
@@ -217,16 +212,15 @@ Klassische zelluläre Physik-Spiele (*Powder Toy*, *Noita*, *Doom Fire*) faszini
 
 ### Empfohlener Prompt für LLMs:
 ```text
-Erstelle mir eine performante WPF-C#-Klasse zur Lösung der 2D-Wärmeleitungsgleichung mit dem 5-Punkt-Differenzenstern.
-Verwende zwei separate Arrays double[,] T_old und double[,] T_new (Double-Buffering).
-Schreibe die Pixel direkt in den BackBuffer einer WriteableBitmap über unsafe byte* Zeigerarithmetik oder Marshal.Copy in ein int[] Pufferarray.
+Erweitere die bestehende WPF-C#-Vorlage PixelHeatFDM (HeatGrid.cs und BitmapHeatRenderer.cs) zur Lösung der 2D-Wärmeleitungsgleichung mit dem 5-Punkt-Differenzenstern.
+Behalte das Double-Buffering mit zwei separaten Arrays float[,] _tCurrent und float[,] _tNext sowie das direkte Schreiben in den WriteableBitmap.BackBuffer (PixelFormats.Bgra32, unsafe uint* Zeigerarithmetik + 256-Farben-LUT uint[256]) bei.
 Verwende KEIN SetPixel, KEIN Canvas und KEIN Multithreading (Single-Threaded DispatcherTimer).
-Implementiere für den Rand die konvektive Robin-Randbedingung mit Wärmeübergangskoeffizient h.
+Implementiere ein ortsabhängiges Materialgitter float[,] _alphaMap sowie für Track A die konvektive Robin-Randbedingung mit Wärmeübergangskoeffizient h bzw. für Track B den zellulären Partikelautomaten.
 ```
 
 ---
 
-## 8. 🔍 Peer-Review-Leitfragen für das Plenum (Showcase & Peer-Challenge)
+## 8. 🔍 Leitfragen für den Live-Showcase & Code-Defense (Säule 2b)
 
 1. **Stabilitätstest am Beamer:**  
    *„Erhöhen Sie den Zeitschritt $\Delta t$ oder die Wärmeleitfähigkeit live am Schieberegler um 25 %. Zeigt das Gitter sofort das charakteristische alternierende Schachbrettmuster der Instabilität, oder wurde das Problem durch künstliches `Math.Clamp()` verschleiert?“*
