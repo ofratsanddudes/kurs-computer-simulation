@@ -86,13 +86,14 @@ public class OrbitCamera
     /// <summary>
     /// Verschiebt den Kamerazielpunkt (LookAtX, LookAtY, LookAtZ) quer zur aktuellen
     /// horizontalen Blickrichtung (AzimuthDeg) und vertikal entlang der Y-Achse.
+    /// [Stufe 1 - Aufgabe 1.2]  Δx = -Δright·cos θ,  Δz = +Δright·sin θ,  Δy = Δup
     /// </summary>
     public void Pan(double deltaRight, double deltaUp)
     {
-        // TODO [Stufe 1 - Aufgabe 1.2]:
-        // Berechnen Sie thetaRad aus _azimuthDeg und verschieben Sie LookAtX, LookAtZ und LookAtY:
-        // LookAtX -= deltaRight * Math.Cos(thetaRad);
-        // LookAtZ += deltaRight * Math.Sin(thetaRad);
-        // LookAtY += deltaUp;
+        double thetaRad = _azimuthDeg * Math.PI / 180.0;
+
+        LookAtX -= deltaRight * Math.Cos(thetaRad);
+        LookAtZ += deltaRight * Math.Sin(thetaRad);
+        LookAtY += deltaUp;
     }
 }

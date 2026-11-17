@@ -150,15 +150,41 @@ public class SceneGraphTests
         Assert.AreEqual(0.5f, grabbedWorldPos.Y, 1e-5f);
         Assert.AreEqual(-0.4f, grabbedWorldPos.Z, 1e-5f);
 
-        // 2. TODO [Stufe 1 - Aufgabe 1.4]:
-        // Kommentieren Sie nach Implementierung von OrbitCamera.Pan(...) (Aufgabe 1.2)
-        // die folgenden Assertions ein, um Ihre Panning-Formel mit dotnet test zu prüfen:
-        /*
+        // 2. [Stufe 1 - Aufgabe 1.4] Panning-Formel prüfen
         var camera = new OrbitCamera { AzimuthDeg = 0.0, LookAtX = 0.0, LookAtY = 0.0, LookAtZ = 0.0 };
         camera.Pan(deltaRight: 2.0, deltaUp: 1.5);
         Assert.AreEqual(-2.0, camera.LookAtX, 1e-5, "Bei theta = 0° verschiebt Pan(2, 1.5) LookAtX um -2.");
         Assert.AreEqual(1.5, camera.LookAtY, 1e-5, "Pan(2, 1.5) verschiebt LookAtY um +1.5.");
         Assert.AreEqual(0.0, camera.LookAtZ, 1e-5, "Bei theta = 0° bleibt LookAtZ unverändert.");
-        */
+    }
+
+    [TestMethod]
+    public void Test_TrackA_GripperFingers_StaySymmetricAroundTcp_WhenWristRotates()
+    {
+        // Kette: Pinole -> Wrist(theta4) -> Backen ±g/2 auf lokaler Z-Achse, TCP im Ursprung
+        float g = 0.10f;
+        var pinole = new SceneNode("Pinole") { Tx = 1.0f, Ty = 0.3f, Ry = 30.0f };
+        var wrist = new SceneNode("Wrist") { Ry = 55.0f };
+        var left = new SceneNode("Left") { Ty = 0.06f, Tz = -g / 2 };
+        var right = new SceneNode("Right") { Ty = 0.06f, Tz = g / 2 };
+        var tcp = new SceneNode("TCP");
+
+        pinole.AddChild(wrist);
+        wrist.AddChild(left);
+        wrist.AddChild(right);
+        wrist.AddChild(tcp);
+
+        Vector3 pL = left.GetWorldPosition();
+        Vector3 pR = right.GetWorldPosition();
+        Vector3 pT = tcp.GetWorldPosition();
+
+        // Backenabstand bleibt g, Backenmitte liegt senkrecht über dem TCP – unabhängig von theta4
+        Assert.AreEqual(g, Vector3.Distance(pL, pR), 1e-5f);
+        Vector3 mid = (pL + pR) / 2.0f;
+        Assert.AreEqual(pT.X, mid.X, 1e-5f);
+        Assert.AreEqual(pT.Z, mid.Z, 1e-5f);
+
+        // theta4 ändert nur die Orientierung: TCP = Pinolen-Ursprung
+        Assert.AreEqual(0.0f, Vector3.Distance(pinole.GetWorldPosition(), pT), 1e-5f);
     }
 }

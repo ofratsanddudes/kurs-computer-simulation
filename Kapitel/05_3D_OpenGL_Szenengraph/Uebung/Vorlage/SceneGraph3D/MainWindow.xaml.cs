@@ -10,13 +10,21 @@ namespace SceneGraph3D;
 public partial class MainWindow : Window
 {
     private readonly OrbitCamera _camera = new();
-    private bool _isDragging = false;
     private Point _lastMousePos;
+
+    // [Aufgabe 1.2] Maus-Modus: Links = Orbit, Rechts = Panning
+    private enum DragMode { None, Orbit, Pan }
+    private DragMode _dragMode = DragMode.None;
 
     // SCARA Geometrie-Konstanten
     private const float HBase = 0.5f;
     private const float L1 = 1.0f;
     private const float L2 = 0.8f;
+
+    // [Aufgabe 1.3] Werkstück
+    private const float WorkpieceSize = 0.12f;  // Kantenlänge [m]
+    private const float GripDistance = 0.12f;   // Greifdistanz [m]
+    private bool _workpieceInReach = false;
 
     // Gelenkvariablen
     private float _theta1Deg = 30.0f;
@@ -29,6 +37,7 @@ public partial class MainWindow : Window
     private readonly SceneNode _arm1Node = new("UpperArm");
     private readonly SceneNode _arm2Node = new("ForeArm");
     private readonly SceneNode _pinoleNode = new("Pinole");
+    private readonly SceneNode _workpieceNode = new("Workpiece");
 
     public MainWindow()
     {
@@ -40,31 +49,78 @@ public partial class MainWindow : Window
     private void BuildSceneGraph()
     {
         // Hierarchie: Root -> Base -> Arm1 -> Arm2 -> Pinole
+        //             Root -> Workpiece
         _rootNode.AddChild(_baseNode);
         _baseNode.AddChild(_arm1Node);
         _arm1Node.AddChild(_arm2Node);
         _arm2Node.AddChild(_pinoleNode);
 
-        // TODO [Stufe 1 - Aufgabe 1.1]:
-        // Weisen Sie hier _baseNode, _arm1Node, _arm2Node und _pinoleNode jeweils
-        // ihre lokale Zeichenlogik über RenderCustomGeometry = gl => { ... } zu,
-        // damit RenderRobot(gl) nur noch _rootNode.Render(gl) aufrufen muss!
+        // [Aufgabe 1.1] Lokale Zeichenlogik je Knoten.
+        // Die Gelenktransformation (Translate/Rotate) übernimmt SceneNode.Render,
+        // hier wird nur noch im lokalen Koordinatensystem gezeichnet.
 
-        // TODO [Stufe 1 - Aufgabe 1.3]:
-        // Fügen Sie einen Knoten _workpieceNode bei (1.10f, 0.06f, -0.40f) unter _rootNode hinzu.
-        // Wichtig: Da DrawCube(gl) einen Einheitswürfel (1.0 m) zeichnet, in RenderCustomGeometry
-        // mit gl.PushMatrix(); gl.Scale(0.12f, 0.12f, 0.12f); DrawCube(gl); gl.PopMatrix(); skalieren!
+        // Basis (statischer Zylinder)
+        _baseNode.RenderCustomGeometry = gl =>
+        {
+            gl.Color(0.4f, 0.45f, 0.5f);
+            DrawCylinder(gl, 0.22f, HBase, 24);
+        };
 
-        // TODO [Stufe 2 - Track A]:
-        // Erweitern Sie den Baum unter _pinoleNode um _wristNode (theta4) sowie
-        // _leftFingerNode (Tz = -_gripWidth / 2) und _rightFingerNode (Tz = +_gripWidth / 2).
-        // Tipp: Ersetzen Sie die rote Platzhalter-Kugel (r = 0.07 m) in _pinoleNode durch den
-        // neuen Greifer (_wristNode-Traverse z. B. bei y = +0.06 m, Greiferbacken zentriert um TCP y = 0).
+        // Schultergehäuse + Arm-1-Segment
+        // Scale bleibt bewusst lokal in Push/Pop, sonst würden Kindknoten mitverzerrt!
+        _arm1Node.RenderCustomGeometry = gl =>
+        {
+            gl.Color(0.2f, 0.6f, 0.9f);
+            DrawSphere(gl, 0.18f);
 
-        // TODO [Stufe 2 - Track B]:
-        // Modellieren Sie die Portal-Kette (_bridgeXNode -> _trolleyZNode -> _ropeYNode -> 3 Klauenfinger).
-        // Tipp für B.2: Nutzen Sie am Window das PreviewKeyDown-Event (mit e.Handled = true), damit
-        // die WPF-Slider und Buttons in der Sidebar die Pfeiltasten und die Leertaste nicht abfangen!
+            gl.PushMatrix();
+            gl.Translate(L1 / 2.0f, 0.0f, 0.0f);
+            gl.Scale(L1, 0.14f, 0.18f);
+            DrawCube(gl);
+            gl.PopMatrix();
+        };
+
+        // Ellenbogen + Arm-2-Segment
+        _arm2Node.RenderCustomGeometry = gl =>
+        {
+            gl.Color(0.2f, 0.8f, 0.4f);
+            DrawSphere(gl, 0.15f);
+
+            gl.PushMatrix();
+            gl.Translate(L2 / 2.0f, 0.0f, 0.0f);
+            gl.Scale(L2, 0.12f, 0.15f);
+            DrawCube(gl);
+            gl.PopMatrix();
+        };
+
+        // Pinolenschaft + Greiferkopf
+        _pinoleNode.RenderCustomGeometry = gl =>
+        {
+            gl.Color(0.85f, 0.85f, 0.85f);
+            gl.PushMatrix();
+            gl.Translate(0.0f, 0.15f, 0.0f);
+            DrawCylinder(gl, 0.035f, 0.35f, 16);
+            gl.PopMatrix();
+
+            gl.Color(0.9f, 0.3f, 0.2f);
+            DrawSphere(gl, 0.07f);
+        };
+
+        // [Aufgabe 1.3] Werkstück auf dem Hallenboden (Mittelpunkt auf halber Kantenhöhe)
+        _workpieceNode.Tx = 1.10f;
+        _workpieceNode.Ty = 0.06f;
+        _workpieceNode.Tz = -0.40f;
+        _workpieceNode.RenderCustomGeometry = gl =>
+        {
+            if (_workpieceInReach) gl.Color(0.2f, 0.85f, 0.2f);  // grün: greifbar
+            else gl.Color(1.0f, 0.55f, 0.0f);                   // orange
+
+            gl.PushMatrix();
+            gl.Scale(WorkpieceSize, WorkpieceSize, WorkpieceSize);
+            DrawCube(gl);
+            gl.PopMatrix();
+        };
+        _rootNode.AddChild(_workpieceNode);
 
         UpdateJointTransforms();
     }
@@ -150,75 +206,17 @@ public partial class MainWindow : Window
         // 3. Hallenboden-Gitter
         DrawFloorGrid(gl, size: 4.0f, step: 0.5f);
 
-        // 4. Roboter-Kinematik rendern
+        // 4. Gesamte Szene (Roboter + Werkstück) über den Szenengraphen rendern
         RenderRobot(gl);
 
         // 5. Analytischen TCP als gelbe Kontrollkugel einblenden
         DrawTcpSphere(gl);
     }
 
+    // [Aufgabe 1.1] Einziger rekursiver Aufruf – keine manuelle Matrix-Kette mehr
     private void RenderRobot(OpenGL gl)
     {
-        // TODO [Stufe 1 - Aufgabe 1.1]:
-        // Aktuell wird die Kinematik hier manuell über gl.PushMatrix() gezeichnet,
-        // statt den Szenengraphen (_rootNode) zu traversieren!
-        // Verschieben Sie die Zeichenaufrufe der einzelnen Glieder in BuildSceneGraph()
-        // in die jeweiligen RenderCustomGeometry-Delegates und ersetzen Sie diese Methode
-        // durch den einzigen Aufruf: _rootNode.Render(gl);
-
-        // Basis (Statischer Zylinder)
-        gl.Color(0.4f, 0.45f, 0.5f);
-        DrawCylinder(gl, 0.22f, HBase, 24);
-
-        // Gelenk 1 & Arm 1
-        gl.PushMatrix();
-        gl.Translate(0.0f, HBase, 0.0f);
-        gl.Rotate(_theta1Deg, 0.0f, 1.0f, 0.0f);
-
-        // Schultergehäuse
-        gl.Color(0.2f, 0.6f, 0.9f);
-        DrawSphere(gl, 0.18f);
-
-        // Arm 1 Segment
-        gl.PushMatrix();
-        gl.Translate(L1 / 2.0f, 0.0f, 0.0f);
-        gl.Scale(L1, 0.14f, 0.18f);
-        DrawCube(gl);
-        gl.PopMatrix();
-
-        // Ellenbogen & Arm 2
-        gl.PushMatrix();
-        gl.Translate(L1, 0.0f, 0.0f);
-        gl.Rotate(_theta2Deg, 0.0f, 1.0f, 0.0f);
-
-        gl.Color(0.2f, 0.8f, 0.4f);
-        DrawSphere(gl, 0.15f);
-
-        // Arm 2 Segment
-        gl.PushMatrix();
-        gl.Translate(L2 / 2.0f, 0.0f, 0.0f);
-        gl.Scale(L2, 0.12f, 0.15f);
-        DrawCube(gl);
-        gl.PopMatrix();
-
-        // Pinole / Vertikalhub (Translation -d3)
-        gl.PushMatrix();
-        gl.Translate(L2, -_d3, 0.0f);
-
-        // Vertikaler Pinolenschaft
-        gl.Color(0.85f, 0.85f, 0.85f);
-        gl.PushMatrix();
-        gl.Translate(0.0f, 0.15f, 0.0f);
-        DrawCylinder(gl, 0.035f, 0.35f, 16);
-        gl.PopMatrix();
-
-        // Greiferkopf (Platzhalter-Kugel in Stufe 1; in Track A durch _wristNode + Greiferbacken ersetzen)
-        gl.Color(0.9f, 0.3f, 0.2f);
-        DrawSphere(gl, 0.07f);
-
-        gl.PopMatrix(); // Ende Pinole
-        gl.PopMatrix(); // Ende Arm 2
-        gl.PopMatrix(); // Ende Arm 1
+        _rootNode.Render(gl);
     }
 
     private void DrawTcpSphere(OpenGL gl)
@@ -271,6 +269,15 @@ public partial class MainWindow : Window
 
         if (TxtTcpDiff != null)
             TxtTcpDiff.Text = $"Deckungsfehler Delta = {diff:F3} mm";
+
+        // [Aufgabe 1.3] Euklidischer 3D-Abstand TCP <-> Werkstück
+        float d = System.Numerics.Vector3.Distance(pMatrix, _workpieceNode.GetWorldPosition());
+        _workpieceInReach = d < GripDistance;
+
+        if (TxtStatus != null)
+            TxtStatus.Text = _workpieceInReach
+                ? $"TCP-Werkstück-Abstand d = {d:F3} m  →  in Greifdistanz"
+                : $"TCP-Werkstück-Abstand d = {d:F3} m";
     }
 
     // Geometrie-Primitive & Normalen
@@ -400,38 +407,37 @@ public partial class MainWindow : Window
     // Kamera-Maus-Events
     private void OpenGlView_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        // TODO [Stufe 1 - Aufgabe 1.2]: Auch auf e.RightButton == MouseButtonState.Pressed prüfen!
-        if (e.LeftButton == MouseButtonState.Pressed)
-        {
-            _isDragging = true;
-            _lastMousePos = e.GetPosition(OpenGlView);
-            OpenGlView.CaptureMouse();
-        }
+        // [Aufgabe 1.2] Links = Orbit, Rechts = Panning
+        if (e.ChangedButton == MouseButton.Left) _dragMode = DragMode.Orbit;
+        else if (e.ChangedButton == MouseButton.Right) _dragMode = DragMode.Pan;
+        else return;
+
+        _lastMousePos = e.GetPosition(OpenGlView);
+        OpenGlView.CaptureMouse();
     }
 
     private void OpenGlView_MouseMove(object sender, MouseEventArgs e)
     {
-        if (!_isDragging) return;
+        if (_dragMode == DragMode.None) return;
 
         Point currentPos = e.GetPosition(OpenGlView);
         double dx = currentPos.X - _lastMousePos.X;
         double dy = currentPos.Y - _lastMousePos.Y;
 
-        // Orbit-Drehung anpassen (Maus-Empfindlichkeit 0.4 Grad/Pixel)
-        // TODO [Stufe 1 - Aufgabe 1.2]:
-        // Nur bei e.LeftButton == MouseButtonState.Pressed _camera.Rotate(...) aufrufen,
-        // im Zweig else if (e.RightButton == MouseButtonState.Pressed) stattdessen _camera.Pan(dx * 0.01, dy * 0.01)!
-        _camera.Rotate(-dx * 0.4, dy * 0.4);
+        if (_dragMode == DragMode.Orbit)
+            _camera.Rotate(-dx * 0.4, dy * 0.4);   // 0.4 °/Pixel (Vorzeichen wie Vorlage)
+        else
+            _camera.Pan(dx * 0.01, dy * 0.01);     // 0.01 m/Pixel
+
         _lastMousePos = currentPos;
     }
 
     private void OpenGlView_MouseUp(object sender, MouseButtonEventArgs e)
     {
-        if (_isDragging)
-        {
-            _isDragging = false;
-            OpenGlView.ReleaseMouseCapture();
-        }
+        if (_dragMode == DragMode.None) return;
+
+        _dragMode = DragMode.None;
+        OpenGlView.ReleaseMouseCapture();
     }
 
     private void OpenGlView_MouseWheel(object sender, MouseWheelEventArgs e)
