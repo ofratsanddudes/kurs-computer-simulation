@@ -25,6 +25,17 @@ public readonly record struct JointPose(float Theta1, float Theta2, float D3, fl
     public JointPose WithGripper(float g) => this with { GWidth = g };
 }
 
+/// <summary>
+/// Track A: 4-Achs-SCARA mit Parallelgreifer, Teach-In und Pick-and-Place.
+///
+/// Wegweiser durch den Code:
+///   1. BuildSceneGraph()        – Aufbau der Knotenhierarchie Root → Basis → Arm1 → Arm2 → Pinole → Handgelenk → Backen
+///   2. UpdateJointTransforms()  – schreibt die Gelenkwerte (θ1, θ2, d3, θ4, g) in die Knoten
+///   3. UpdateGripLogic()        – Abstandsprüfung TCP ↔ Werkstück, Greifen/Ablegen per Reparenting
+///   4. StartMotion / MotionTimer_Tick – Teach-In: kubisch interpolierte Fahrt mit DispatcherTimer (~60 Hz)
+///   5. OpenGlView_OpenGLDraw()  – Rendering: Kamera, Boden, dann EIN Aufruf _rootNode.Render(gl)
+///   6. CalculateAnalyticTcp()   – analytische Vorwärtskinematik zur Kontrolle (gelbe Kugel)
+/// </summary>
 public partial class MainWindow : Window
 {
     private readonly OrbitCamera _camera = new();
@@ -136,6 +147,11 @@ public partial class MainWindow : Window
     // =====================================================================
     // Szenengraph
     // =====================================================================
+    /// <summary>
+    /// Baut den Szenengraphen einmalig auf. Jeder Knoten bekommt über RenderCustomGeometry
+    /// seine eigene Geometrie im LOKALEN Koordinatensystem. Die Lage relativ zum Elternknoten
+    /// (Tx/Ty/Tz, Ry) setzt UpdateJointTransforms() – Kinder bewegen sich dadurch automatisch mit.
+    /// </summary>
     private void BuildSceneGraph()
     {
         // Root ─┬─ Base ── Arm1 ── Arm2 ── Pinole ── Wrist ─┬─ LeftFinger
@@ -242,6 +258,11 @@ public partial class MainWindow : Window
         UpdateJointTransforms();
     }
 
+    /// <summary>
+    /// Überträgt die aktuellen Gelenkwerte in die lokalen Transformationen der Knoten.
+    /// Es werden nur lokale Werte gesetzt – die Weltlage ergibt sich über die Hierarchie
+    /// (keine manuell berechneten Weltkoordinaten).
+    /// </summary>
     private void UpdateJointTransforms()
     {
         _arm1Node.Ty = HBase;
@@ -277,6 +298,11 @@ public partial class MainWindow : Window
     // =====================================================================
     // Greiflogik (Pick-and-Place durch Reparenting)
     // =====================================================================
+    /// <summary>
+    /// Greiflogik nach jeder Gelenkänderung:
+    /// d = |p_TCP − p_Werkstück|; Greifen, wenn der Greifer schließt und d &lt; r_grab,
+    /// Ablegen, sobald der Greifer wieder öffnet.
+    /// </summary>
     private void UpdateGripLogic()
     {
         Vector3 tcp = _tcpNode.GetWorldPosition();
@@ -299,6 +325,10 @@ public partial class MainWindow : Window
 
     private float GripperYawDeg => _theta1Deg + _theta2Deg + _theta4Deg;
 
+    /// <summary>
+    /// Greifen durch Reparenting: Das Werkstück wird von Root unter den TCP-Knoten umgehängt
+    /// und folgt ab jetzt automatisch jeder Bewegung der kinematischen Kette.
+    /// </summary>
     private void GrabWorkpiece()
     {
         // Weltorientierung des Werkstücks relativ zum Greifer erhalten
@@ -315,6 +345,10 @@ public partial class MainWindow : Window
         UpdateJointTransforms(); // Backen auf Kontaktbreite begrenzen
     }
 
+    /// <summary>
+    /// Ablegen: Weltposition und -orientierung übernehmen, Werkstück wieder unter Root hängen
+    /// und auf Station A/B einrasten lassen (bzw. auf den Hallenboden legen).
+    /// </summary>
     private void ReleaseWorkpiece()
     {
         Vector3 world = _workpieceNode.GetWorldPosition();
@@ -378,6 +412,10 @@ public partial class MainWindow : Window
         _motionLabel = "";
     }
 
+    /// <summary>
+    /// Startet das nächste Bahnsegment aus der Warteschlange. Die Dauer richtet sich nach
+    /// der größten Gelenkbewegung, damit alle Achsen gleichzeitig ankommen.
+    /// </summary>
     private bool NextSegment()
     {
         if (_motionQueue.Count == 0) return false;
@@ -400,6 +438,10 @@ public partial class MainWindow : Window
         return true;
     }
 
+    /// <summary>
+    /// Wird ~60-mal pro Sekunde aufgerufen: berechnet den Fortschritt s ∈ [0, 1],
+    /// glättet ihn kubisch (3s² − 2s³) und interpoliert damit alle Gelenkwerte.
+    /// </summary>
     private void MotionTimer_Tick(object? sender, EventArgs e)
     {
         double s = Math.Min(1.0, _segmentClock.Elapsed.TotalSeconds / _segmentDuration);
@@ -427,6 +469,10 @@ public partial class MainWindow : Window
         UpdateAll();
     }
 
+    /// <summary>
+    /// Ablauf des automatischen Pick-and-Place-Zyklus als Liste von Wegpunkten.
+    /// Greifen/Ablegen passiert automatisch in UpdateGripLogic(), wenn sich g ändert.
+    /// </summary>
     private IEnumerable<(JointPose, string)> BuildPickAndPlaceCycle()
     {
         float open = GWidthMax;
@@ -470,6 +516,10 @@ public partial class MainWindow : Window
     // =====================================================================
     // Rendering
     // =====================================================================
+    /// <summary>
+    /// Einmalige OpenGL-Initialisierung: Tiefentest, Phong-Beleuchtung (ambient, diffus,
+    /// spekular), Material mit Glanzpunkten und GL_NORMALIZE.
+    /// </summary>
     private void OpenGlView_OpenGLInitialized(object sender, OpenGLRoutedEventArgs args)
     {
         OpenGL gl = args.OpenGL;
@@ -517,6 +567,10 @@ public partial class MainWindow : Window
         gl.MatrixMode(OpenGL.GL_MODELVIEW);
     }
 
+    /// <summary>
+    /// Wird jeden Frame aufgerufen. Die gesamte Szene wird über einen einzigen rekursiven
+    /// Aufruf _rootNode.Render(gl) gezeichnet (Push → Transformation → Geometrie → Kinder → Pop).
+    /// </summary>
     private void OpenGlView_OpenGLDraw(object sender, OpenGLRoutedEventArgs args)
     {
         OpenGL gl = args.OpenGL;
@@ -552,6 +606,10 @@ public partial class MainWindow : Window
     // =====================================================================
     // Vorwärtskinematik
     // =====================================================================
+    /// <summary>
+    /// Analytische Vorwärtskinematik – unabhängig vom Szenengraphen gerechnet.
+    /// Muss mit _tcpNode.GetWorldPosition() übereinstimmen (Deckungsfehler 0 mm).
+    /// </summary>
     private (float X, float Y, float Z) CalculateAnalyticTcp()
     {
         // x = L1 cos θ1 + L2 cos(θ1+θ2)

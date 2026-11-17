@@ -7,6 +7,15 @@ using SharpGL.WPF;
 
 namespace SceneGraph3D;
 
+/// <summary>
+/// Stufe 1: 3-Achs-SCARA mit hierarchischem Szenengraphen.
+///
+/// Wegweiser durch den Code:
+///   Aufgabe 1.1 – BuildSceneGraph(): Geometrie je Knoten über RenderCustomGeometry;
+///                 RenderRobot(): nur noch _rootNode.Render(gl)
+///   Aufgabe 1.2 – OrbitCamera.Pan() + Maus-Events unten (rechte Taste = Panning)
+///   Aufgabe 1.3 – _workpieceNode in BuildSceneGraph(), Abstand in UpdateTcpCalculations()
+/// </summary>
 public partial class MainWindow : Window
 {
     private readonly OrbitCamera _camera = new();
@@ -46,6 +55,10 @@ public partial class MainWindow : Window
         UpdateTcpCalculations();
     }
 
+    /// <summary>
+    /// Baut den Szenengraphen auf: Root → Basis → Arm1 → Arm2 → Pinole (+ Werkstück unter Root).
+    /// Jeder Knoten zeichnet nur seine eigene Geometrie im lokalen Koordinatensystem.
+    /// </summary>
     private void BuildSceneGraph()
     {
         // Hierarchie: Root -> Base -> Arm1 -> Arm2 -> Pinole
@@ -248,6 +261,10 @@ public partial class MainWindow : Window
         return (x, y, z);
     }
 
+    /// <summary>
+    /// Vergleicht analytischen TCP mit dem TCP aus dem Szenengraphen (Deckungsfehler) und
+    /// prüft den 3D-Abstand TCP ↔ Werkstück (Aufgabe 1.3).
+    /// </summary>
     private void UpdateTcpCalculations()
     {
         var (xAna, yAna, zAna) = CalculateAnalyticTcp();
