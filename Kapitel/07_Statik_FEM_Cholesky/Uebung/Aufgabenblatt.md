@@ -1,19 +1,22 @@
-# Aufgabenblatt Termin 07: Statische Modelle, FEM-Fachwerke & Cholesky-Löser
-## Lehrveranstaltung: Systemsimulation / Digitaler Zwilling
-### FH Oberösterreich – Campus Wels | Studiengang Automatisierungstechnik
+# Aufgabenblatt 07: Statische Modelle, FEM-Fachwerke & Cholesky-Löser
 
----
+**Lehrveranstaltung:** Systemsimulation / Digitaler Zwilling  
+**Studiengang:** B.Sc. Automatisierungstechnik, 5. Semester  
+**Institution:** Fachhochschule Oberösterreich – Campus Wels  
+**Bearbeitungsform:** Zweistufige Hausübung im 2er-Team (1 Woche)
 
-| Metadaten | Details |
-| :--- | :--- |
-| **Lehrveranstaltungseinheit:** | Termin 07 (begleitend zu Kapitel 07: Statische Modelle) |
-| **Themenschwerpunkt:** | Finite-Elemente-Methode (FEM) für 2D-Fachwerke, `MathNet.Numerics`, Cholesky-Zerlegung & Blockpartitionierung |
-| **Technologie-Stack:** | C# 12 / .NET 8/10, `MathNet.Numerics`, WPF Canvas (Frontend aus Termin 03) |
-| **Vorgreif-Sperre:** | **Erlaubt:** `MathNet.Numerics` (DenseMatrix, Vector, Cholesky), WPF Canvas Vektorgrafik.<br>**Strengstens verboten:** *KEINE* dynamischen DGL-Integratoren (RK4), *KEINE* S-Functions, *KEINE* Event-Queues! |
-| **Bearbeitungsform & Zeitbudget:** | **Zweistufige Hausübung im festen 2er-Team (1 Woche):**<br>• **Stufe 1 (Basisaufgabe):** Gemeinsames Fundament auf der C#-Vorlage (Richtwert ca. 60 Min. zu Hause)<br>• **Stufe 2 (Vertiefungsaufgabe / Track-Ausbau):** Wahlmodell Track A (Industrie) **ODER** Track B (Simulation Game) (Richtwert ca. 3–4 h zu Hause) |
-| **Abgabeform:** | Git-Repository: Sourcecode, Unit-Tests und Markdown-Bericht (`README.md`) |
+| Stufe | Richtwert | Thema / Inhalt |
+| :--- | :--- | :--- |
+| **Stufe 1 (Basisaufgabe)** | ca. 60 Min. | Auflager-/Kraftpfeile, 5-Knoten-Auslegerkran & Singularitäts-Test auf `TrussFemSolver.sln` |
+| **Stufe 2 – Track A (Industrie)** | ca. 3–4 h *(Wahl)* | Portalkran-FEM-Verformung unter Wanderlast |
+| **Stufe 2 – Track B (Simulation Game)** | ca. 3–4 h *(Wahl)* | Bridge Constructor Physics Engine |
 
----
+> [!IMPORTANT]
+> **Technische Rahmenbedingungen**
+> - **Plattform & Projekt:** C# 12 / .NET 8 oder .NET 10, bereitgestellte WPF-Projektmappe (ohne zusätzliche NuGet-Pakete)
+> - **Zugelassene APIs:** `MathNet.Numerics` (`DenseMatrix`, `Vector`, `Cholesky`), `WPF Canvas`
+> - **Abgrenzung:** Rein statische Gleichungslösung; keine Zeitintegration und keine zusätzlichen NuGet-Pakete
+
 
 ## 1. Lernziele (Intended Learning Outcomes - ILOs)
 
@@ -26,9 +29,8 @@ Nach erfolgreicher Bearbeitung dieser Übungseinheit sind Sie in der Lage:
 5. **Kräfte, Spannungen & Invarianten prüfen:** Stabnormalkräfte $N_i$, Normalspannungen $\sigma_i$ und Euler-Knicklasten $N_{\text{knick}}$ zu berechnen sowie das globale Vektorgleichgewicht ($\sum \vec{F} = \vec{0}$) als Invariante auf Maschinengenauigkeit nachzuweisen.
 6. **Verheiratung mit Termin 03:** Den in Termin 03 entwickelten interaktiven WPF Canvas mit der FEM-Rechenengine zu verbinden, sodass Zug- und Druckstäbe farbkodiert und Lagerkräfte als dynamische Vektorpfeile dargestellt werden.
 
----
 
-## 2. Mathematisch-Theoretische Grundlagen
+## 2. Mathematische Grundlagen
 
 ### 2.1 Elementsteifigkeitsmatrix des 2D-Stabes
 
@@ -62,7 +64,6 @@ $$\begin{bmatrix} \mathbf{K}_{ff} & \mathbf{K}_{fp} \\ \mathbf{K}_{pf} & \mathbf
    - $N > 0$: Zugstab (im Canvas blau)
    - $N < 0$: Druckstab (im Canvas rot)
 
----
 
 ## 3. Stufe 1: Basisaufgabe (Gemeinsames Fundament auf der C#-Vorlage, Richtwert ca. 60 Min.)
 
@@ -98,7 +99,9 @@ $$\begin{bmatrix} \mathbf{K}_{ff} & \mathbf{K}_{fp} \\ \mathbf{K}_{pf} & \mathbf
   - Zugband Stab 3 (Zug): $N_3 = +\frac{F}{2} = +5{,}000\,\text{kN}$ (blau)
   - Auflagerkräfte vertikal: $F_{y1} = +5{,}000\,\text{kN}$, $F_{y2} = +5{,}000\,\text{kN}$, Gleichgewichtsfehler $|\sum F_x|, |\sum F_y| < 10^{-11}\,\text{N}$.
 
-#### Aufgabenstellung (Schritt für Schritt auf Basis von `Vorlage/TrussFemSolver.sln`):
+### Aufgabenstellung (auf Basis von `Vorlage/TrussFemSolver.sln`):
+**Vorbereitung – Starter-Kit untersuchen (`Vorlage/TrussFemSolver.sln`):**
+- Öffnen Sie die Solution `Vorlage/TrussFemSolver.sln` und untersuchen Sie die bereitgestellte 2D-FEM-Engine (`Fem/TrussElement.cs`, `Fem/GlobalStiffnessMatrix.cs`, `Fem/CholeskySolver.cs`) sowie die Canvas-Visualisierung in `MainWindow.xaml.cs`.
 
 1. **Aufgabe 1.1 – Auflager-Symbole sowie Last- und Reaktionskraft-Pfeile in `RenderCanvas()` ergänzen:**
    - Starten Sie `TrussFemSolver` und verifizieren Sie, dass die Telemetrie exakt `Max. Verschiebung: 1,823 mm` und `F_y1: 5,00 kN | F_y2: 5,00 kN` anzeigt.
@@ -115,9 +118,8 @@ $$\begin{bmatrix} \mathbf{K}_{ff} & \mathbf{K}_{fp} \\ \mathbf{K}_{pf} & \mathbf
    - Kommentieren Sie testweise in `CreateStage1Model` die Zeile `model.FixDof(n1.DofX);` aus (sodass beide Lager in X-Richtung verschieblich sind $\to$ horizontale Starrkörper-Bewegung möglich).
    - Beobachten Sie, warum `kff.Cholesky()` in `CholeskySolver.Solve()` eine Exception wirft (Symmetrisch Positiv Definite Matrix $\mathbf{K}_{ff}$ erfordert $\det(\mathbf{K}_{ff}) > 0$ ohne Eigenwert $0$!) und machen Sie die Änderung anschließend wieder rückgängig.
 
----
 
-## 4. Stufe 2: Vertiefungsaufgabe / Track-Ausbau (Wahlmodell – GENAU EINE Aufgabe!)
+## 4. Stufe 2: Vertiefungsaufgabe / Track-Ausbau (Wahlmodell: Track A ODER Track B)
 
 > [!IMPORTANT]
 > **Pick your Track (Wahlmodell – KEINE Doppelbelastung!):**  
@@ -127,7 +129,6 @@ $$\begin{bmatrix} \mathbf{K}_{ff} & \mathbf{K}_{fp} \\ \mathbf{K}_{pf} & \mathbf
 > 
 > Beide Aufgaben basieren auf der FEM-Cholesky-Berechnung und verheiraten die Statik-Engine nahtlos mit der WPF-Vektorvisualisierung aus Termin 03. Bearbeiten Sie **NUR EINEN** Track!
 
----
 
 ### Track A (Industrie): Portalkran-FEM-Verformung unter Wanderlast
 
@@ -172,7 +173,6 @@ In Industriehallen fahren Portalkräne mit schweren Lasten über Fachwerkträger
    - Überschreitet die Druckkraft die Knicklast ($|N| \ge N_{\text{knick}}$), blinkt der entsprechende Stab im Canvas gelb/orange als Warnanzeige.
    - Überprüfen Sie in jedem Simulationsschritt automatisiert $\sum \vec{F}_{\text{Lager}} + \sum \vec{F}_{\text{Last}} = \vec{0}$ und dokumentieren Sie die Ergebnisse im Markdown-Bericht.
 
----
 
 ### Track B (Simulation Game): Bridge Constructor Physics Engine
 
@@ -221,20 +221,19 @@ Im Simulationsspiel-Klassiker *Bridge Constructor* entwerfen Spieler Brücken ü
      - Bei Kollaps: Animieren Sie den Einsturz (Knoten fallen unter Gravitation nach unten).
    - Bis zum Bruch muss das Vektorgleichgewicht in jedem Zeitschritt exakt $\sum \vec{F} = \vec{0}$ erfüllen.
 
----
 
-## 5. Akzeptanzkriterien & Definition of Done
+## 5. Akzeptanzkriterien & Bewertungsrubrik (10 Punkte)
 
 Für die volle Punktzahl (10 Punkte) müssen folgende Kriterien erfüllt sein:
 
 | Kriterium | Punkte | Beschreibung |
 | :--- | :---: | :--- |
-| **FEM-Modell & Cholesky-Solver** | **3 P.** | Korrekte Elementmatrizen, fehlerfreie Assemblierung und exakte Blockpartitionierung; robuster Cholesky-Solve über `MathNet.Numerics`. |
-| **Verheiratung mit T03-Canvas** | **3 P.** | Nahtlose grafische Darstellung im Canvas; Verformungsüberhöhung, Farbcodierung der Zug-/Druckkräfte und dynamische Lastdarstellung. |
-| **Erweiterte Tragwerksmechanik** | **2 P.** | **Track A:** Euler-Knicknachweis mit Querschnittswerten.<br>**Track B:** Physikalischer Stabbruch bei $N_{\text{zul}}$, sicheres Abfangen nicht-SPD-Matrizen und Einsturzanimation. |
-| **Gleichgewichtsnachweis & Bericht** | **2 P.** | Automatisierter Invarianten-Check ($\sum F_x = 0, \sum F_y = 0$ auf Maschinengenauigkeit); sauberer Markdown-Bericht mit Diagrammen und Verformungsbildern. |
+| **FEM-Modell & Cholesky-Solver** | 3 P. | Korrekte Elementmatrizen, fehlerfreie Assemblierung und exakte Blockpartitionierung; robuster Cholesky-Solve über `MathNet.Numerics`. |
+| **Verheiratung mit T03-Canvas** | 3 P. | Nahtlose grafische Darstellung im Canvas; Verformungsüberhöhung, Farbcodierung der Zug-/Druckkräfte und dynamische Lastdarstellung. |
+| **Erweiterte Tragwerksmechanik** | 2 P. | **Track A:** Euler-Knicknachweis mit Querschnittswerten.<br>**Track B:** Physikalischer Stabbruch bei $N_{\text{zul}}$, sicheres Abfangen nicht-SPD-Matrizen und Einsturzanimation. |
+| **Gleichgewichtsnachweis & Bericht** | 2 P. | Automatisierter Invarianten-Check ($\sum F_x = 0, \sum F_y = 0$ auf Maschinengenauigkeit); sauberer Markdown-Bericht mit Diagrammen und Verformungsbildern. |
+| **Gesamt** | **10 P.** | **100 % der Übungseinheit** |
 
----
 
 ## 6. Online-Recherche-Box
 
@@ -250,7 +249,6 @@ Nutzen Sie zur Vorbereitung und Vertiefung folgende Quellen:
   - `Euler critical buckling load pin-ended column formula`
   - `truss reaction forces global equilibrium verification`
 
----
 
 ## 7. Vibe-Coding Prompting-Tipps
 
@@ -264,7 +262,6 @@ Falls Sie KI-Assistenten verwenden, beachten Sie folgende Vorgaben zur Vermeidun
 > **Prompt-Vorlage 2: Stabkräfteberechnung mit Vorzeichenkonsistenz**  
 > *„Zeige mir die C#-Formel zur Berechnung der Stabnormalkraft $N$ aus den Knotenverschiebungen $\mathbf{u}_i$ und $\mathbf{u}_j$. Achte strikt auf das Vorzeichen: Verlängerung $\Delta L > 0$ muss Zugkraft ($N > 0$) ergeben, Verkürzung $\Delta L < 0$ Druckkraft ($N < 0$). Berechne auch die Euler-Knicklast $N_{\text{crit}} = \pi^2 E I / L^2$ und prüfe auf Versagen.“*
 
----
 
 ## 8. 🔍 Leitfragen für den Live-Showcase & Code-Defense (Säule 2b)
 

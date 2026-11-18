@@ -3,15 +3,20 @@
 **Lehrveranstaltung:** Systemsimulation / Digitaler Zwilling  
 **Studiengang:** B.Sc. Automatisierungstechnik, 5. Semester  
 **Institution:** Fachhochschule Oberösterreich – Campus Wels  
-**Bearbeitungsform:** Zweistufige Hausübung im festen 2er-Team (1 Woche):
-- **Stufe 1 (Basisaufgabe):** Gemeinsames Fundament auf der C#-Vorlage (Richtwert ca. 60 Min. zu Hause)
-- **Stufe 2 (Vertiefungsaufgabe / Track-Ausbau):** Wahlmodell Track A (Industrie) **ODER** Track B (Simulation Game) (Richtwert ca. 3–4 h zu Hause)
-**Technologie-Vorgabe:** C# 12 / .NET 8 oder .NET 10 Konsolenapplikation (`System.Numerics.Vector2`).  
-> [!CAUTION]
-> **Vorgreif-Sperre für Termin 01:**  
-> In diesem Übungsblatt sind **ausschließlich reine Konsolenprogramme** zulässig. **KEIN** WPF, **KEIN** ScottPlot, **KEIN** Multithreading (`Parallel.For`), **KEIN** SharpGL! Visualisierung erfolgt über formatierte Konsolentabellen, ASCII-Art oder CSV-Export.
+**Bearbeitungsform:** Zweistufige Hausübung im 2er-Team (1 Woche)
 
----
+| Stufe | Richtwert | Thema / Inhalt |
+| :--- | :--- | :--- |
+| **Stufe 1 (Basisaufgabe)** | ca. 60 Min. | `EulerIntegrator`, Bodenkontakt-Interpolation & Heun-Verfahren auf `KinematikEuler.sln` (`1.1`–`1.4`) |
+| **Stufe 2 – Track A (Industrie)** | ca. 3–4 h *(Wahl)* | Hydraulikzylinder-Endlagendämpfung & Parameterstudie |
+| **Stufe 2 – Track B (Simulation Game)** | ca. 3–4 h *(Wahl)* | Retro Artillery Duel mit Newton-Luftwiderstand & Windböen |
+
+> [!IMPORTANT]
+> **Technische Rahmenbedingungen**
+> - **Plattform & Projekt:** C# 12 / .NET 8 oder .NET 10, reine Konsolenapplikation (ohne zusätzliche NuGet-Pakete)
+> - **Zugelassene APIs:** `System.Numerics.Vector2`, Standard-.NET-Konsolenausgabe und CSV-Export
+> - **Abgrenzung:** Keine GUI-Frameworks, kein Multithreading; Ausgabe über formatierte Konsolentabellen oder ASCII-Darstellungen
+
 
 ## 1. Lernziele (Intended Learning Outcomes - ILOs)
 
@@ -22,7 +27,6 @@ Nach erfolgreicher Bearbeitung dieses Aufgabenblattes können Sie:
 4. **Physikalische Ereignis-Interpolation:** Das Auftreffen auf eine Begrenzungsfläche (Bodenkontakt, Anschlag) durch lineare Schnittpunkt-Interpolation ermitteln, ohne dass es zu unrealistischer Durchdringung (Tunneling) kommt.
 5. **Ingenieurmäßige Entkopplung:** Die Simulationsrechnung (Zustand, Ableitung, Integrationsschritt) strikt von der Textausgabe trennen.
 
----
 
 ## 2. Mathematische Grundlagen
 
@@ -46,39 +50,39 @@ $$\text{Korrektor (Mittelwert-Update):} \quad \mathbf{x}_{k+1} = \mathbf{x}_k + 
 Erreicht der Zustand im Zeitschritt $k+1$ eine unzulässige Penetration (z. B. $y_{k+1} < 0$ bei Bodenkontakt oder $x_{k+1} > s_{\max}$ beim Zylinderanschlag), darf nicht einfach der Zustand $k+1$ verworfen oder beibehalten werden. Die reale Auftreffzeit $t^* \in [t_k, t_{k+1}]$ wird über lineare Interpolation ermittelt:
 $$\tau = \frac{0 - y_k}{y_{k+1} - y_k} \in [0, 1] \implies t^* = t_k + \tau \cdot \Delta t, \quad x^* = x_k + \tau \cdot (x_{k+1} - x_k)$$
 
----
 
 ## 3. Stufe 1: Basisaufgabe (Gemeinsames Fundament auf der C#-Vorlage, Richtwert ca. 60 Min.)
 
 **Basis-Projekt:** Öffnen Sie die bereitgestellte Projektvorlage `Vorlage/KinematikEuler.sln` (`Program.cs`, `Models/KinematicState.cs`, `Solvers/EulerIntegrator.cs`, `KinematikEuler.Tests/KinematikEulerTests.cs`).  
-**Ziel:** Vervollständigen Sie als ersten Schritt Ihrer Hausübung (**Stufe 1**) den expliziten Euler-Integrator (`StepEuler`), die lineare Schnittpunkt-Interpolation (`InterpolateGroundImpact`) sowie das Prädiktor-Korrektor-Verfahren nach Heun (`StepHeun`), bringen Sie alle Unit-Tests (`dotnet test`) auf Grün und analysieren Sie den systematischen Höhen- und Reichweitenfehler beim schiefen Wurf im Vakuum.
+**Ziel:** Vollziehen Sie als ersten Schritt Ihrer Hausübung (**Stufe 1**) die in der Vorlage bereitgestellte Referenz-Implementierung des expliziten Euler-Integrators (`StepEuler`) und der linearen Schnittpunkt-Interpolation (`InterpolateGroundImpact`) nach, implementieren Sie selbständig das Prädiktor-Korrektor-Verfahren nach Heun (`StepHeun`), aktivieren Sie die vorbereiteten Genauigkeits-Assertions in `KinematikEulerTests.cs` (`dotnet test`) und analysieren Sie den systematischen Höhen- und Reichweitenfehler beim schiefen Wurf im Vakuum.
 
 ### Aufgabenstellung (auf Basis von `Vorlage/KinematikEuler.sln`):
-1. **Aufgabe 1.1 – Zustandsraum-Inspektion (`Models/KinematicState.cs`):**
-   - Öffnen Sie `Vorlage/KinematikEuler.sln` und betrachten Sie das unveränderliche Zustands-Struct in `Models/KinematicState.cs`:
-   ```csharp
-   public readonly record struct KinematicState(double Time, double X, double Y, double Vx, double Vy);
-   ```
-2. **Aufgabe 1.2 – Expliziter Euler (`StepEuler`) & Boden-Interpolation (`InterpolateGroundImpact`):**
-   - Vervollständigen Sie in `Solvers/EulerIntegrator.cs` die Methode `StepEuler(...)` für die DGL 2. Ordnung ($\dot{x} = v_x, \; \dot{y} = v_y, \; \dot{v}_x = a_x, \; \dot{v}_y = a_y$) sowie `InterpolateGroundImpact(previous, current)` mittels linearer Nullstellen-Interpolation $\tau = \frac{0 - y_k}{y_{k+1} - y_k}$.
-   - Führen Sie `dotnet test` aus und verifizieren Sie, dass die Unit-Tests für `StepEuler` und `InterpolateGroundImpact` grün durchlaufen!
-3. **Aufgabe 1.3 – Prädiktor-Korrektor nach Heun (`StepHeun`) & Konvergenzvergleich im Vakuum:**
-   - Implementieren Sie in `Solvers/EulerIntegrator.cs` zusätzlich die Methode `StepHeun(...)` (Abschnitt 2.3) und vergleichen Sie in `Program.RunStage1_BallisticTrajectory()` beide Verfahren für:
-     - Startposition: $x_0 = 0\,\text{m}, \; y_0 = 0\,\text{m}$, Abgangsgeschwindigkeit: $v_0 = 150\,\text{m/s}$, Winkel: $\alpha = 45^\circ$ ($g = 9{,}81\,\text{m/s}^2$)
-     - Schrittweiten: $\Delta t = 0{,}1\,\text{s}$ und $\Delta t = 0{,}01\,\text{s}$
-   - Vergleichen Sie Wurfweite $x_{\text{impact}}$, Flugzeit $t_{\text{impact}}$ und Scheitelhöhe $y_{\max}$ mit den analytischen Vakuumlösungen:
-     $$t_{\text{ana}} = \frac{2 v_0 \sin \alpha}{g} \approx 21{,}623\,\text{s}, \quad x_{\text{ana}} = \frac{v_0^2 \sin(2\alpha)}{g} \approx 2293{,}58\,\text{m}, \quad y_{\max,\text{ana}} = \frac{(v_0 \sin\alpha)^2}{2g} \approx 573{,}39\,\text{m}$$
-4. **Aufgabe 1.4 – Erwartete Konsolenausgabe & Physikalische Erkenntnis:**
-   ```text
-   === STUFE-1-ERGEBNISSE: SCHIEFER WURF IM VAKUUM ===
-   Analytisch:  t = 21.623 s | x_impact = 2293.58 m | y_max = 573.39 m
-   Euler dt=0.10s: t = 21.673 s (+0.0500 s) | x_impact = 2298.89 m (+5.310 m) | y_max = 578.69 m (+5.297 m)
-   Euler dt=0.01s: t = 21.628 s (+0.0050 s) | x_impact = 2294.11 m (+0.530 m) | y_max = 573.92 m (+0.530 m)
-   Heun  dt=0.10s: t = 21.623 s (+0.0000 s) | x_impact = 2293.58 m (+0.000 m) | y_max = 573.39 m (+0.000 m)
-   ```
-   *(Erkenntnisfrage für das Plenum: Obwohl $\dot{x} = v_{x0} = \text{const}$ in $x$-Richtung fehlerfrei integriert wird, überschätzt der explizite Euler in jedem Schritt die Höhe $y$, weil er die Anfangsgeschwindigkeit $v_{y,k}$ statt des Intervallmittels nutzt! Dadurch landet das Projektil exakt um $\Delta t / 2$ zu spät und fliegt um $\Delta x = v_{x0} \cdot \frac{\Delta t}{2} \approx +5{,}31\,\text{m}$ zu weit. Warum liefert Heun (RK2) im Vakuum selbst bei $\Delta t = 0{,}1\,\text{s}$ exakt $0{,}000\,\text{m}$ Fehler?)*
+**Vorbereitung – Starter-Kit untersuchen (`Vorlage/KinematikEuler.sln`):**
+- Öffnen Sie die Solution `Vorlage/KinematikEuler.sln` und machen Sie sich mit der Struktur aus Hauptprogramm (`Program.cs`), unveränderlichem Zustands-Modell (`Models/KinematicState.cs` als `readonly record struct`), Solver (`Solvers/EulerIntegrator.cs`) und Testprojekt (`KinematikEuler.Tests/KinematikEulerTests.cs`) vertraut.
 
----
+1. **Aufgabe 1.1 – Code-Walkthrough Expliziter Euler-Schritt (`Solvers/EulerIntegrator.cs`):**
+   - Vollziehen Sie in `Solvers/EulerIntegrator.cs` die als Referenz vorbereitete Methode `StepEuler(...)` für das DGL-System 1. Ordnung ($\dot{x} = v_x, \; \dot{y} = v_y, \; \dot{v}_x = a_x, \; \dot{v}_y = a_y$) Zeile für Zeile nach.
+   - **Selbsttest-Tipp (Golden Reference Numbers):** Startet ein Körper bei $t_0 = 0\,\text{s}, \; x_0 = 0\,\text{m}, \; y_0 = 100\,\text{m}$ mit $v_{x,0} = 20\,\text{m/s}, \; v_{y,0} = 0\,\text{m/s}$ unter reiner Schwerkraft $(a_x = 0, \; a_y = -9{,}81\,\text{m/s}^2)$, liefert genau ein Schritt `StepEuler` mit $\Delta t = 0{,}1\,\text{s}$ exakt: $t_1 = 0{,}1\,\text{s}$, $x_1 = 2{,}00\,\text{m}$, $y_1 = 100{,}00\,\text{m}$ (da $v_{y,0} = 0$), $v_{x,1} = 20{,}00\,\text{m/s}$ und $v_{y,1} = -0{,}981\,\text{m/s}$.
+2. **Aufgabe 1.2 – Code-Walkthrough Lineare Bodenkontakt-Interpolation (`InterpolateGroundImpact`):**
+   - Prüfen Sie in `Solvers/EulerIntegrator.cs` die vorbereitete Referenz-Methode `InterpolateGroundImpact(previous, current)` mittels linearer Nullstellen-Interpolation $\tau = \frac{0 - y_k}{y_{k+1} - y_k} \in [0, 1]$, sodass am Boden exakt $y^* = 0\,\text{m}$ ohne „Tunneling“ erreicht wird.
+   - **Selbsttest-Tipp (Golden Reference Numbers):** Für `previous` $(t_k = 1{,}0\,\text{s}, \; x_k = 10{,}0\,\text{m}, \; y_k = +2{,}0\,\text{m})$ und `current` $(t_{k+1} = 1{,}1\,\text{s}, \; x_{k+1} = 11{,}0\,\text{m}, \; y_{k+1} = -1{,}0\,\text{m})$ ergibt sich exakt $\tau = \frac{2}{3} \approx 0{,}6667$, Auftreffzeit $t^* = 1{,}0667\,\text{s}$, Auftreffort $x^* = 10{,}6667\,\text{m}$ und $y^* = 0{,}0\,\text{m}$.
+3. **Aufgabe 1.3 – Eigenimplementierung Prädiktor-Korrektor nach Heun (`StepHeun`) & Konvergenzvergleich im Vakuum:**
+   - Ersetzen Sie in `Solvers/EulerIntegrator.cs` den vorläufigen Platzhalter in `StepHeun(...)` (`TODO [Stufe 1 - Aufgabe 1.3]`) durch das zweistufige Prädiktor-Korrektor-Verfahren nach Heun (Abschnitt 2.3) und vergleichen Sie in `Program.RunStage1_BallisticTrajectory()` beide Verfahren für:
+     - Startposition: $x_0 = 0\,\text{m}, \; y_0 = 0\,\text{m}$, Abgangsgeschwindigkeit: $v_0 = 150\,\text{m/s}$, Winkel: $\alpha = 45^\circ$ ($g = 9{,}81\,\text{m/s}^2$)
+     - Schrittweiten: $\Delta t = 0{,}10\,\text{s}$ und $\Delta t = 0{,}01\,\text{s}$
+   - Vergleichen Sie Wurfweite $x_{\text{impact}}$, Flugzeit $t_{\text{impact}}$ und Scheitelhöhe $y_{\max}$ mit den analytischen Referenzwerten:
+     $$t_{\text{ana}} = \frac{2 v_0 \sin \alpha}{g} \approx 21{,}624\,\text{s}, \quad x_{\text{ana}} = \frac{v_0^2 \sin(2\alpha)}{g} \approx 2293{,}58\,\text{m}, \quad y_{\max,\text{ana}} = \frac{(v_0 \sin\alpha)^2}{2g} \approx 573{,}39\,\text{m}$$
+4. **Aufgabe 1.4 – Automatisierte Unit-Test-Verifikation (`KinematikEuler.Tests`) & Fehleranalyse:**
+   - Öffnen Sie `KinematikEuler.Tests/KinematikEulerTests.cs`, kommentieren Sie in `Test_HeunRK2_BallisticVacuum_OutperformsExplicitEuler()` den vorbereiteten Prüfblock `TODO [Stufe 1 - Aufgabe 1.4]` ein und führen Sie im Terminal `dotnet test` aus, bis alle 4 Unit-Tests (Freifall-Abgleich, Boden-Interpolation, $\mathcal{O}(\Delta t)$-Konvergenz und Heun-Vakuumwurf) grün durchlaufen.
+   - Starten Sie anschließend Modus `1` des Konsolenprogramms und prüfen Sie Ihre Ausgabe gegen die Referenzwerte:
+   ```text
+   Analytisch: t_Flug = 21.624 s | x_Impact = 2293.58 m | y_Max = 573.39 m
+   Euler (dt = 0.10s): t_Impact = 21.724 s (+0.0999 s) | x_Impact = 2304.18 m (+10.598 m) | y_Max = 578.70 m (+5.308 m)
+   Euler (dt = 0.01s): t_Impact = 21.634 s (+0.0100 s) | x_Impact = 2294.64 m (+1.061 m)  | y_Max = 573.92 m (+0.530 m)
+   Heun  (dt = 0.10s): t_Impact = 21.624 s (-0.0001 s) | x_Impact = 2293.57 m (-0.009 m)  | y_Max = 573.39 m (-0.001 m)
+   ```
+   *(Erkenntnisfrage für das Plenum: Obwohl $\dot{x} = v_{x0} = \text{const}$ in $x$-Richtung fehlerfrei integriert wird, überschätzt der explizite Euler die Scheitelhöhe um $\frac{1}{2} v_{y0} \Delta t \approx +5{,}31\,\text{m}$, weil er die Anfangsgeschwindigkeit $v_{y,k}$ statt des Intervallmittels nutzt! Dadurch landet das Projektil um $\Delta t$ zu spät und fliegt um $\Delta x \approx v_{x0} \cdot \Delta t \approx +10{,}60\,\text{m}$ zu weit. Warum integriert Heun (RK2) Parabeln auf den Gitterpunkten exakt?)*
+
 
 ## 4. Stufe 2: Vertiefungsaufgabe / Track-Ausbau (Wahlmodell: Track A ODER Track B)
 
@@ -87,21 +91,15 @@ $$\tau = \frac{0 - y_k}{y_{k+1} - y_k} \in [0, 1] \implies t^* = t_k + \tau \cdo
 > Wählen Sie als 2er-Team für die Hausübung **entweder Track A (Industrie)** ODER **Track B (Simulation Game)**.  
 > Beide Tracks basieren auf denselben mathematischen Integrationsprinzipien (Euler vs. Heun, nichtlineare Dämpfung/Widerstand, Ereignisprüfung) und werden nach denselben Qualitätskriterien mit maximal 10 Punkten bewertet.
 
-```
-                    ┌──────────────────────────────────────────────┐
-                    │ WÄHLEN SIE GENAU EINEN DER BEIDEN TRACKS:    │
-                    └──────────────────────┬───────────────────────┘
-                                           │
-                 ┌─────────────────────────┴─────────────────────────┐
-                 ▼                                                   ▼
-┌─────────────────────────────────┐                 ┌─────────────────────────────────┐
-│  Track A: Industrie & Mechatronik│                 │   Track B: Simulation Game      │
-│  Hydraulikzylinder-Dämpfung mit │                 │   Artillery Strike / Retro Tank │
-│  viskoser & Blenden-Reibung     │                 │   mit Newton-Drag & Windböen    │
-└─────────────────────────────────┘                 └─────────────────────────────────┘
+```mermaid
+flowchart TD
+    Choice(["<b>Wählen Sie genau einen Track</b><br/><i>Stufe 2 · Wahlmodell</i>"]) -->|Industrie-Fokus| A["<b>Track A: Industrie</b><br/><i>Hydraulikzylinder-Endlagendämpfung & Parameterstudie</i>"]
+    Choice -->|Game-Fokus| B["<b>Track B: Simulation Game</b><br/><i>Retro Artillery Duel mit Newton-Luftwiderstand & Windböen</i>"]
+    style Choice fill:#f8fafc,stroke:#475569,stroke-width:2px,color:#0f172a
+    style A fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    style B fill:#f0fdf4,stroke:#15803d,stroke-width:2px,color:#14532d
 ```
 
----
 
 ### Track A (Industrie): Hydraulikzylinder-Endlagendämpfung & Parameterstudie
 
@@ -115,7 +113,8 @@ Bewegungsgleichung:
 $$m \ddot{x} = F_{\text{vor}} - F_{\text{dämpf}}(x, v) - F_{\text{anschlag}}(x)$$
 
 1. **Antriebskraft:**
-   $$F_{\text{vor}} = 60\,000\,\text{N} \quad (\text{für } 0 \le x < 0{,}80\,\text{m})$$
+   $$F_{\text{vor}} = 60\,000\,\text{N} \quad (\text{durchgehend für } x \ge 0\,\text{m})$$
+   *(Hinweis: Der Systemdruck wirkt auch am Anschlag weiter, sodass sich ohne unphysikalisches Schalt-Rattern die statische Gleichgewichtslage $x_{\text{eq}} = 0{,}80\,\text{m} + \frac{60\,000\,\text{N}}{5 \times 10^7\,\text{N/m}} = 0{,}8012\,\text{m}$ gegen die Kontaktfeder einstellt.)*
 2. **Dämpfungscharakteristik:**
    - Im Freilaufbereich ($x < 0{,}65\,\text{m}$): Reines viskoses Schmierfilm-Gleiten:
      $$F_{\text{dämpf}} = d_{\text{lin}} \cdot v, \quad d_{\text{lin}} = 250\,\text{N}\cdot\text{s/m}$$
@@ -131,13 +130,12 @@ $$m \ddot{x} = F_{\text{vor}} - F_{\text{dämpf}}(x, v) - F_{\text{anschlag}}(x)
    - `EulerSolver` (expliziter Euler)
    - `HeunSolver` (Heun RK2)
 3. **Arbeitspaket A.3 – Parameterstudie zur Schrittweitenstabilität:**
-   - Simulieren Sie den Vorgang bis zum Stillstand ($t_{\text{end}} = 0{,}10\,\text{s}$) mit Schrittweiten $\Delta t \in \{10\,\mu\text{s}, 100\,\mu\text{s}, 500\,\mu\text{s}, 2\,\text{ms}\}$.
-   - Zeigen Sie, ab welcher Schrittweite der explizite Euler am Kontaktanschlag instabil wird (Oszillation/Explosion), während Heun noch stabiles Einschwingen zeigt.
+   - Simulieren Sie den Vorgang bis zum eingeschwungenen Stillstand am Anschlag ($t_{\text{end}} = 0{,}15\,\text{s}$) mit Schrittweiten $\Delta t \in \{10\,\mu\text{s}, 100\,\mu\text{s}, 500\,\mu\text{s}, 2\,\text{ms}\}$.
+   - Zeigen Sie, ab welcher Schrittweite der explizite Euler am Kontaktanschlag instabil wird (Oszillation/Explosion), während Heun noch stabiles Einschwingen auf $x_{\text{eq}} = 0{,}8012\,\text{m}$ zeigt.
 4. **Arbeitspaket A.4 – Ausgabe & Auswertung:**
    - Schreiben Sie die Trajektoriedaten ($t, x, v, a, F_{\text{dämpf}}$) in eine `.csv`-Datei (`simulation_cylinder.csv`).
    - Geben Sie eine ASCII-Übersichtstabelle der Spitzenverzögerung $a_{\min}$ und des maximalen Anschlagwegs $x_{\max}$ auf der Konsole aus.
 
----
 
 ### Track B (Simulation Game): Retro Artillery Duel mit Newton-Luftwiderstand & Windböen
 
@@ -157,23 +155,22 @@ Physikalische Parameter:
 - Gravitation: $g = 9{,}81\,\text{m/s}^2$, Luftdichte: $\rho = 1{,}225\,\text{kg/m}^3$
 - Granatenmasse: $m = 10{,}0\,\text{kg}$, Kaliberradius $r = 0{,}06\,\text{m}$ ($A = \pi r^2 \approx 0{,}01131\,\text{m}^2$)
 - Widerstandsbeiwert: $c_{\text{w}} = 0{,}25$
-- Abgangsgeschwindigkeit: $v_0 = 160\,\text{m/s}$
+- Startkoordinate (Abschusspunkt auf dem Gelände): $(x_0, y_0) = (0\,\text{m}, \; y_{\text{terrain}}(0) = 20{,}0\,\text{m})$, Abgangsgeschwindigkeit: $v_0 = 160\,\text{m/s}$
 - Höhenprofil des Geländes:
   $$y_{\text{terrain}}(x) = 50 \cdot \sin(0{,}002 \cdot x) + 20 \cdot \cos(0{,}005 \cdot x)$$
-- Zielkoordinate: Feindlicher Bunker bei $x_{\text{ziel}} = 1400\,\text{m}, \; y_{\text{ziel}} = y_{\text{terrain}}(1400) \approx 28{,}77\,\text{m}$.
+- Zielkoordinate: Feindlicher Bunker bei $x_{\text{ziel}} = 1400\,\text{m}, \; y_{\text{ziel}} = y_{\text{terrain}}(1400) \approx 31{,}83\,\text{m}$.
 
 #### Aufgabenstellung Track B:
 1. **Arbeitspaket B.1 – Aerodynamik-Modell & Integratoren:** Implementieren Sie die Modellklasse `BallisticEngine` mit gekapselter Vektorrechnung sowie `EulerSolver` und `HeunSolver` (RK2).
 2. **Arbeitspaket B.2 – Kollisionserkennung & Geländeschnittpunkt:**
-   - Die Kollision findet statt, sobald $y_k \le y_{\text{terrain}}(x_k)$.
-   - Berechnen Sie den Einschlagspunkt $x_{\text{impact}}$ über lineare Interpolation zwischen Schritt $k$ und $k+1$.
+   - Überwachen Sie die Höhe über Grund $h_k = y_k - y_{\text{terrain}}(x_k)$ (beim Abschuss $k = 0$ ist $h_0 = 0\,\text{m}$). Ein Geländetreffer liegt im Schritt $k \to k+1$ ($k \ge 1$) vor, sobald $h_k > 0$ und $h_{k+1} \le 0$ gilt, damit der Schuss nicht bereits bei $k = 0$ sofort abbricht.
+   - Berechnen Sie den Einschlagspunkt $(x_{\text{impact}}, y_{\text{impact}})$ über lineare Nullstellen-Interpolation zwischen Schritt $k$ und $k+1$ mit $\tau = \frac{h_k}{h_k - h_{k+1}} \in [0, 1]$.
 3. **Arbeitspaket B.3 – Automatischer Schusswinkel-Finder (KI-Zielrechner):**
    - Implementieren Sie einen Zielsuch-Algorithmus (Bisektion oder Winkelsweep in Intervallen $[10^\circ, 80^\circ]$ mit Schrittweite $0{,}1^\circ$), der bei gegebener Windgeschwindigkeit $w_x$ den Schusswinkel $\alpha$ ermittelt, bei dem das Projektil das Ziel auf $\pm 1{,}5\,\text{m}$ trifft.
 4. **Arbeitspaket B.4 – Stochastische Runden-Simulation:**
    - Simulieren Sie 5 Schussfolgen mit stochastischem Wind $w_x \sim \mathcal{U}(-15, +15)\,\text{m/s}$.
    - Geben Sie pro Schuss den berechneten Zielwinkel $\alpha$, die Flugdauer und eine einfache ASCII-Plot-Darstellung der Flugbahn (Matrix $80 \times 25$ Zeichen) oder einen CSV-Export aus.
 
----
 
 ## 5. Akzeptanzkriterien & Bewertungsrubrik (10 Punkte)
 
@@ -188,7 +185,6 @@ Die Abnahme erfolgt anhand des lauffähigen Codes und eines kurzen technischen B
 | **Dokumentation & Code-Qualität** | 1 P. | Übersichtliche Konsolenausgabe/CSV, nachvollziehbare Dokumentation mit Vergleichstabelle (Euler vs. Heun). |
 | **Gesamt** | **10 P.** | **100 % der Übungseinheit** |
 
----
 
 ## 6. Online-Recherche-Box
 
@@ -202,7 +198,6 @@ Nutzen Sie für Ihre Recherche folgende offizielle Quellen und präzise Fachbegr
   - `explicit Euler numerical instability step size stiffness`
   - `projectile trajectory linear interpolation impact ground detection`
 
----
 
 ## 7. Vibe-Coding Prompting-Tipps
 
@@ -222,7 +217,6 @@ Achte bei der Luftreibung penibel darauf, die Relativgeschwindigkeit v_rel = sqr
 Verwende KEIN WPF, KEIN ScottPlot und KEIN Multithreading.
 ```
 
----
 
 ## 8. 🔍 Leitfragen für den Live-Showcase & Code-Defense (Säule 2b)
 

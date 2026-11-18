@@ -25,6 +25,8 @@ Dieses Kapitel beinhaltet Folgendes:
 
 ---
 
+<!-- _class: showcase -->
+
 ### Live-Showcase & Code-Defense: Termin 09
 
 Präsentation der Hausübung aus Termin 09 (**Stufe 1: Basisaufgabe** + **Stufe 2: Track A oder B**, [Aufgabenblatt 09](../../09_Diskrete_Systeme_DES/Uebung/Aufgabenblatt.md)):
@@ -56,6 +58,29 @@ Präsentation der Hausübung aus Termin 09 (**Stufe 1: Basisaufgabe** + **Stufe 
 
 ---
 
+<!-- _class: recap -->
+
+### Kontext & Einordnung: Synthese zu gekoppelten cyber-physischen Systemen
+
+<div class="columns top">
+<div class="three">
+
+In **T08** (ODEs) und **T09** (DES) trennten wir Kontinuum und Ereignisse – wie verhält sich ein realer **Digitaler Zwilling**?
+
+- **Warum T08 oder T09 allein nicht reichen:** Eine Presse oder ein Stromrichter folgt **DGLn (T08)**, trifft aber auf **harte Anschläge, Ventile oder SPS-Takte (T09)**.
+- **Engpass:** Ein fester RK4-Schritt $\Delta t$ überspringt den Aufprallmoment (**Tunneling-Fehler**).
+- **Heute (4. Modellart: Hybrid):** Verschmelzung von ODE + Ereignissen über **Zero-Crossing-Bisektion** & variable Abtastzeiten.
+
+</div>
+<div class="two">
+
+![](./Diagramme/Semester_Bruecke_T10.svg)
+
+</div>
+</div>
+
+---
+
 ![bg right](./Illustrationen/Abschnitt_1.jpg)
 
 ## 10.1: Fallbeispiel: Der Bouncing Ball
@@ -67,18 +92,6 @@ Dieser Abschnitt beinhaltet Folgendes:
 - Modellierung des Aufpralls als diskretes Ereignis.
 - Herleitung der analytischen Lösung für die hybride Trajektorie.
 - Simulation der Abfolge von kontinuierlichen Phasen und diskreten Sprüngen.
-
----
-
-### Rückblick & Brücke: Wo stehen wir in der Vorlesung?
-
-In **Termin 08** haben wir rein kontinuierliche Flüsse (ODEs) und in **Termin 09** rein diskrete Ereignissprünge (DES) getrennt voneinander betrachtet – doch wie verhält sich ein realer **Digitaler Zwilling** in der Automatisierungstechnik?
-
-- **Warum weder Termin 08 noch Termin 09 allein ausreichen:**
-  - Eine reale Hydraulikpresse, ein Roboter mit Greifkontakt oder ein geschalteter Stromrichter bewegt sich zwar **kontinuierlich nach Differentialgleichungen (Termin 08)**, trifft aber plötzlich auf **harte mechanische Anschläge, Sicherheits-Lichtschranken, Ventil-Umschaltungen oder digitale SPS-Abtasttakte (Termin 09)**!
-  - Ein reiner RK4-Solver aus Termin 08 überspringt im festen Zeitschritt $\Delta t$ den exakten Aufprallmoment (**Tunneling-Fehler** / Energie-Explosion).
-- **Einordnung ins große Ganze (4. Modellart & Krönung des Kurses):**
-  - Heute verschmelzen wir **kontinuierliche Integration (T08)** und **diskrete Ereignisbehandlung (T09)** zur **Hybriden Simulation** mit **Zero-Crossing-Bisektion** und variablen Abtastzeiten.
 
 ---
 
@@ -1582,6 +1595,8 @@ Der Block steuert seine eigene Ausführungs-frequenz dynamisch basierend auf dem
 
 ---
 
+<!-- _class: summary -->
+
 # Zusammenfassung Kapitel 10
 
 - **Hybrides Paradigma:** Kombiniert kontinuierliche Dynamik ($\dot{\mathbf{x}}_c = \mathbf{f}(\mathbf{x}_c, \mathbf{x}_d, \mathbf{u}, t)$) mit diskreten Zustandsübergängen ($\mathbf{x}_d^+ = \mathbf{g}(\mathbf{x}_c, \mathbf{x}_d, \mathbf{u}, t)$).
@@ -1593,9 +1608,11 @@ Der Block steuert seine eigene Ausführungs-frequenz dynamisch basierend auf dem
 
 ---
 
+<!-- _class: outlook -->
+
 ![bg right:35% contain](./Illustrationen/Ausblick_Epilog.png)
 
-## Ausblick: Synthese & Epilog
+### Ausblick: Synthese & Epilog
 
 Das gesamte Methodenspektrum steht nun zur Verfügung:
 
@@ -1610,6 +1627,8 @@ Das gesamte Methodenspektrum steht nun zur Verfügung:
 - **Synthese:** Leitfaden zur erfolgreichen Projektarbeit
 
 ---
+
+<!-- _class: homework -->
 
 ### Hausübung Termin 10: Hybride Dynamik, Bisektion & Zeno
 

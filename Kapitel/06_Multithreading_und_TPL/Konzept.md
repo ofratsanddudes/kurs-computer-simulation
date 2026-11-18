@@ -6,7 +6,8 @@
 ---
 
 ## 1. Artefakte, Vorgreif-Sperre & Kapitel-Schnittstellen
-- **Foliensatz:** [`Folien/Folien.md`](./Folien/Folien.md)
+- **Foliensätze:** [`Folien/Folien.md`](./Folien/Folien.md) | Optional (Selbststudium): [`Folien_Anhang_A_TPL_und_Hardware_Details.md`](./Folien/Folien_Anhang_A_TPL_und_Hardware_Details.md)
+- **Abgrenzung Hauptdeck vs. Anhang (optional fürs Selbststudium):** Das Hauptdeck (`Folien.md`) vermittelt den vollständigen T06-Kernstoff (Prozess vs. Thread, TPL `Parallel.For`, Amdahlsches Gesetz, `ConcurrentBag<T>`, `lock`/`Interlocked`, thread-lokale Reduktion & `Random`, Double-Buffering, `Task.Run` + `IProgress<T>` + `CancellationToken`) eigenständig für Vorlesung, Übung und Quiz. Der optionale **Anhang A** vertieft Hardware- und Runtime-Interna für Interessierte: 64-Byte-Cache-Lines & MESI-Protokoll (`[StructLayout(Size = 64)]`, `localInit`/`localFinally`), `.NET ThreadPool` (*Work-Stealing*, *Hill-Climbing*, `Partitioner.Create`), lock-freie CAS-Schleifen (`Interlocked.CompareExchange`) sowie `Channel<T>` (`DropOldest`) als Producer-Consumer-Brücke zu T04.
 - **Übungsblatt & Vorlage:** [`Aufgabenblatt.md`](./Uebung/Aufgabenblatt.md) | **Moodle-Text:** [`Text.md`](./Moodle/Text.md) | [`MultithreadingBenchmark.sln`](./Uebung/Vorlage/MultithreadingBenchmark.sln)
 - **Vorgreif-Sperre (Technologie-Stand T06):** TPL (`Parallel.For`, `Task.Run`), `Interlocked`, `lock`, `IProgress<T>`, `CancellationToken`, Amdahl. *Strikte Tabus:* Kein Math.NET Cholesky (erst T07).
 - **Kapitel-Brücken & Quiz-Zuordnung:**
@@ -21,11 +22,11 @@
 
 ## 3. Zweistufige Hausübung (`Einheit 06`) & Showcase-Fokus
 - **Stufe 1 – Basisaufgabe (`1.1`–`1.4`):**
-  - `1.1`: Datenparallelen Partikelschritt (`StepParallel`) mit `Parallel.For` und `MaxDegreeOfParallelism` implementieren.
-  - `1.2`: UI-Freeze durch Auslagerung in `Task.Run` mit gedrosseltem `IProgress<T>` und kooperativem `CancellationTokenSource` beheben.
-  - `1.3`: Automatisierte Kernskalierungsreihe ($p = 1 \dots P_{\max}$) mit JIT-Warmup und Amdahl-Berechnung aufbauen.
-  - `1.4`: Bitweise/numerische Übereinstimmung zwischen `StepSerial` und `StepParallel` via `dotnet test` nachweisen.
+  - `1.1`: UI-Freeze in `BtnStart_Click` beheben – Simulationsschleife asynchron via `async/await` und `Task.Run` auslagern sowie Zwischenstände gedrosselt über `IProgress<SimulationProgress>` melden.
+  - `1.2`: Kooperativen Not-Aus mit `CancellationTokenSource` (`_cts`), `BtnCancel_Click` und sauberer `OperationCanceledException`-Behandlung umsetzen.
+  - `1.3`: Amdahl-Skalierungsreihe ($1 \dots P_{\max}$ Kerne) in `BtnRunScaling_Click` asynchron über `await Task.Run(...)` ausführen und Speedup $S(p)$ / Effizienz $E(p)$ auswerten.
+  - `1.4`: Automatisierte Unit-Test-Verifikation (`dotnet test` auf `ThreadingTests.cs`: `StepSequential` vs. `StepParallel` sowie Amdahl-Referenzwerte).
 - **Stufe 2 – Wahlmodell (10 Pkt.):**
   - **Track A (`A.1`–`A.4` – Parallele Monte-Carlo-Toleranzanalyse):** Maßkettenrechnung für $10^7$ Getriebewellen-Baugruppen (Box-Muller), Thread-lokale Reduktion vs. `Interlocked` vs. `lock` und Amdahl-Parameterfit für den seriellen Anteil $1 - f_{\text{par}}$.
-  - **Track B (`B.1`–`B.4` – 100.000 Boids / Zombie-Horde):** Hochparalleler 2D-Schwarm-Benchmark mit strikter Read/Write-Puffertrennung (`stateRead` $\to$ `stateWrite`), Kernskalierung und experimentellem Nachweis von *False Sharing* (`long[p]` vs. `long[p * 16]`).
+  - **Track B (`B.1`–`B.4` – 100.000 Boids / Zombie-Horde):** Hochparalleler 2D-Schwarm-Benchmark mit strikter Read/Write-Puffertrennung (`StateCurrent[]` $\to$ `StateNext[]`), asynchronem WPF-Echtzeit-Dashboard und Amdahl-Kernskalierungsreihe.
 - **Showcase- & Code-Defense-Fokus (zu Beginn von T07):** Warum ist `new Random()` in parallelen Schleifen nicht thread-sicher? Warum bremst `lock` in der inneren Schleife auf $S < 1$ aus? Wie entsteht 64-Byte Cache-Line Ping-Pong (*False Sharing*)?

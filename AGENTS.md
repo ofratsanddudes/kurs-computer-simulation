@@ -24,7 +24,7 @@
   - `./Beispiele/` *(für Kap. 02–05, 07–10)* – Lauffähige C#-Vorlesungsbeispiele, Plot-Generatoren und zugehörige Unit-Tests (`Beispiele.sln`).
   - `./Uebung/` *(für Kap. 01–10)* – Aufgabenblatt (`Aufgabenblatt.md`) und C#-Projektvorlage (`./Vorlage/`).
   - `./Quiz/` *(in Kap. 03, 05, 08, 10)* – `README.md` sowie die 10 modularen Test-Markdown-Quelldateien (`Test_01_Vorbereitung.md` bis `Test_10_Pruefung.md`).
-  - `./Moodle/` *(für Kap. 00–11)* – Zentrale Moodle-Upload-Mappe des Kapitels: formelfreier Abschnittstext (`Text.md`), `Banner.jpg` sowie alle kompilierten Export-Artefakte (`*_Folien.pdf`, `*_Aufgabenblatt.pdf`, `Quiz_0X_Termin_YY.xml`).
+  - `./Moodle/` *(für Kap. 00–11)* – Zentrale Moodle-Upload-Mappe des Kapitels: formelfreier Abschnittstext (`Text.md`), `Banner.jpg` sowie alle kompilierten Export-Artefakte (`*_Folien.pdf`, `*_Folien_Anhang_*.pdf`, `*_Aufgabenblatt.pdf`, `Quiz_0X_Termin_YY.xml`).
 - `./Skripte/` – Plattformunabhängige Node.js-Skripte für Build Management (PDF- & Moodle-XML-Export direkt nach `Kapitel/*/Moodle/`) und Quality Control (Linter für Folien-DOM, Abschnittsschema, SVGs, Variablen-Konsistenz und Quizzes).
 
 ---
@@ -67,6 +67,7 @@ Vor jedem Commit nach Folien-, SVG- oder Übungsänderungen müssen die zugehör
   - `npm run lint:sections:XX` – Kapitel-/Abschnittsschema (3:4-Hintergrundbilder, Standard-Einleitungssätze, `Rückblick & Brücke`-Folie, reine Bildsyntax).
   - `npm run lint:svg:XX` – SVG-Qualitäts- & Clipping-Audit.
   - `npm run lint:variables:XX` – Didaktische Variablen-Konsistenz zwischen Text, Formeln, SVGs und Code.
+  - `npm run lint:exercises:XX` – Striktes Schema-Audit für `Aufgabenblatt.md` (8 Abschnitte, 4+4+4-Symmetrie, 10-Pkt.-Rubrik, Altbegriff-Blacklist), `Vorlage/`-Kopplung & Export-Aktualität (`Moodle/*.pdf`, `Moodle/*.xml`).
 - **PDF- & Moodle-XML-Export (direkt nach `Kapitel/XX_*/Moodle/`):** `npm run export:pdf:XX` (Vorlesung `XX` $\to$ `Moodle/*_Folien.pdf`), `npm run export:pdf:uebung:XX` (Übungsblatt `01`–`10` $\to$ `Moodle/*_Aufgabenblatt.pdf`), `npm run export:moodle` (`Moodle/Quiz_0X_Termin_YY.xml`).
 - **Gesamtlauf:** `npm run lint` bzw. `npm run export:pdf` & `npm run export:moodle`.
 

@@ -22,6 +22,8 @@ Verbindliche Gestaltungs-, Typografie- und Prüfregeln für SVG-Illustrationen i
 | **Code- & Zahlenwerte (`.code`, `.val`)** | `13.5px`–`15px`, `'Consolas', monospace`, `bold` | Hohe Lesbarkeit für Indizes, Formeln und Array-Werte. |
 | **Untertitel / Indizes (`.sub`, `.idx`)** | $\ge 12.5\text{px}$ (niemals $< 12\text{px}$) | Hält die effektive Schriftgröße nach Browser-CTM sicher über dem Linter-Limit von `11.5 px`. |
 | **Box-Innenabstand (`panel_clipping`)** | $\ge 8\text{px}$ horizontaler Abstand zum `<rect>`-Rand | Verhindert seitliches Überlaufen von `<text>`-Elementen. |
+| **Hintergrund-Transparenz & kein Außenrahmen** | Kein Vollflächen-`<rect>` (`>= 80 %` der `viewBox`) | SVG-Canvas bleibt transparent und ohne äußeren Kasten-Rahmen („Folie-in-Folie“), damit Inhalte organisch auf der Folie liegen und CSS-`drop-shadow` sauber wirkt. |
+| **Semantische Farbklassen (`sem-*`)** | Ausschließlich Klassen aus [`Themen/svg_palette.json`](../../../Themen/svg_palette.json) (`sem-primary`, `sem-info`, `sem-success`, `sem-warning`, `sem-danger`, `sem-accent`, `sem-card`, `sem-muted`, `sem-neutral` inkl. `-bg`, `-fill`, `-stroke`, `-text`) | Keine hartcodierten Hex-Farben in handgezeichneten `Diagramme/*.svg`; Änderungen zentral über `npm run sync:svg-palette` verteilbar. |
 
 ---
 
@@ -31,21 +33,23 @@ Verbindliche Gestaltungs-, Typografie- und Prüfregeln für SVG-Illustrationen i
    - Algorithmen- und Datenstruktur-SVGs müssen **echte, nachrechenbare Zahlenwerte** zeigen (konkrete Array-Einträge, Suchschritte mit Index-Vergleich oder konkrete Koordinatenwerte vor/nach einer Transformation).
 2. **Visueller Direktvergleich (*Naiv/Falsch vs. Richtig*):**
    - Wo eine Reihenfolge, Speicheranordnung oder ein numerischer Fehler erklärt wird, stelle beide Fälle nebeneinander in einem Kontrast-SVG gegenüber.
-3. **Einheitliche Farbsemantik:**
-   - **Blau (`#eff6ff` Füllung, `#2563eb` Rahmen, `#1e40af` Text):** Aktiver Datenpfad, reguläre Schritte.
-   - **Grün (`#f0fdf4` / `#dcfce7` Füllung, `#16a34a` Rahmen, `#15803d` Text):** Zieltreffer, korrekter Pfad, Optimierungserfolg.
-   - **Gelb/Amber (`#fffbeb` / `#fef3c7` Füllung, `#d97706` Rahmen, `#b45309` Text):** Aktuell geprüfter Index / Zwischenzustand.
-   - **Rot (`#fef2f2` / `#fee2e2` Füllung, `#dc2626` Rahmen, `#991b1b` Text):** Fehlerfall, ausgeschlossener Bereich, Engpass.
-   - **Grau (`#e2e8f0` Füllung, `#94a3b8` Text):** Ignorierte oder bereits verarbeitete Elemente.
-4. **Variablen-Synchronität (`npm run lint:variables`):**
+3. **Keine eingebauten Text-Sidebars („Poster-SVGs“):**
+   - Erklärender Fließtext, Aufzählungslisten und mehrtermige Formeln gehören als echtes Markdown/MathJax in eine eigene MARP-Spalte (`<div class="columns">`), **nicht** als Textbox-Sidebar neben das Diagramm ins SVG (außer wenn ausdrücklich gewünscht). Im SVG stehen nur Achsen, Kurven, kurze Labels und konkrete Zahlenwerte.
+3. **Einheitliche, zentrale Farbsemantik (`Themen/svg_palette.json`):**
+   - **Keine hartcodierten Hex-/RGB-Farben in neuen oder überarbeiteten SVGs!** Nutze stattdessen ausschließlich die semantischen CSS-Klassen aus [`Themen/svg_palette.json`](../../../Themen/svg_palette.json) (Single Source of Truth für Skill, Linter und Sync-Skript):
+     - Je Rolle `<role>` stehen `.sem-<role>` (`fill` + `stroke`), `.sem-<role>-stroke` und `.sem-<role>-text` zur Verfügung (Standardrollen: `sem-primary`, `sem-success`, `sem-warning`, `sem-danger`, `sem-muted`, `sem-neutral` – exakte Liste & Bedeutung immer direkt in `Themen/svg_palette.json` nachsehen).
+     - **Neue semantische Rollen:** Reichen die vorhandenen Rollen für ein Diagramm nicht aus, darfst du eine neue semantische Rolle (ohne Farbnamen, z. B. `sem-highlight` oder `sem-accent-2`) in `Themen/svg_palette.json` ergänzen.
+     - **Pflicht-Synchronisation:** Nach dem Anlegen/Ändern von SVGs oder `Themen/svg_palette.json` immer `npm run sync:svg-palette` ausführen; `npm run lint:svg` prüft automatisch auf unbekannte Klassen, veraltete Paletten-Blöcke und hartcodierte Farben.
+4. **Variablen- & Geometrie-Synchronität (`npm run lint:variables`):**
    - Alle alleinstehenden mathematischen Symbole oder `Consolas`-Bezeichner im SVG müssen exakt mit den Bezeichnern im Folientext übereinstimmen.
+   - **Vollständige kinematische & trigonometrische Konstruktion:** Bei kinematischen Ketten oder geometrischen Herleitungen müssen (a) alle Teil-Transformationen ($\mathbf{T}, \mathbf{R}$) als Pfeile/Drehbögen entlang der Kette und (b) in analytischen Skizzen sowohl Einzel-/Relativwinkel (z. B. $\theta_1, \theta_2$) als auch Summenwinkel (z. B. $\theta_1 + \theta_2$ gegen eine gestrichelte Parallel-Hilfslinie) explizit eingezeichnet sein.
 
 ---
 
 ## 3. Technische Auditor-Regeln & Prüfworkflow
 
 - **Vermeidung von `SHIELD_TEXT_OVERFLOW`-Fehlalarmen:** Zeichne geneigte Stäbe oder schmale Bauteile dicht neben `<text>`-Labels als dicke `<line stroke-linecap="round">` oder `<polygon>` statt als kleines `<rect>` (der SVG-Auditor stuft kleine `<rect>`-Elemente nahe Text als zu enge Text-Hintergrundboxen ein).
-- **Saubere Dateinamen & UTF-8:** Nur Unterstrich-Dateinamen (`Mein_Diagramm.svg`) ohne verwaiste Alt-Dateien im Ordner `Diagramme/` erzeugen; saubere UTF-8-Umlaute bzw. XML-Entities (`&#8594;`, `&#177;`, `&amp;`, `&lt;`, `&gt;`) nutzen.
+- **Saubere Dateinamen, transparenter Canvas & UTF-8:** Nur Unterstrich-Dateinamen (`Mein_Diagramm.svg`) ohne verwaiste Alt-Dateien im Ordner `Diagramme/` erzeugen; äußeren SVG-Canvas transparent lassen (`fill="none"` statt vollflächigem `#FFFFFF`-Hintergrund-`<rect>`, damit sich SVGs nahtlos in weiße und getönte Highlight-Folien einfügen); saubere UTF-8-Umlaute bzw. XML-Entities (`&#8594;`, `&#177;`, `&amp;`, `&lt;`, `&gt;`) nutzen.
 - **Pflicht-Prüfung nach jeder SVG-Änderung:**
   ```powershell
   npm run lint:svg:XX

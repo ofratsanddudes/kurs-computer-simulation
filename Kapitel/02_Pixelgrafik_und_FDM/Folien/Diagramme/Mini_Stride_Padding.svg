@@ -1,57 +1,137 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 420" width="260" height="420">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 48 260 372" width="260" height="372">
   <defs>
+    <!-- @svg-palette-defs:start -->
+    <linearGradient id="grad-sem-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#eff6ff" />
+      <stop offset="100%" stop-color="#dbeafe" />
+    </linearGradient>
+    <linearGradient id="grad-sem-primary-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="grad-sem-info" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0f9ff" />
+      <stop offset="100%" stop-color="#bae6fd" />
+    </linearGradient>
+    <linearGradient id="grad-sem-info-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0369a1" />
+      <stop offset="100%" stop-color="#075985" />
+    </linearGradient>
+    <linearGradient id="grad-sem-success" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0fdf4" />
+      <stop offset="100%" stop-color="#dcfce7" />
+    </linearGradient>
+    <linearGradient id="grad-sem-success-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#15803d" />
+      <stop offset="100%" stop-color="#166534" />
+    </linearGradient>
+    <linearGradient id="grad-sem-warning" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="100%" stop-color="#fef3c7" />
+    </linearGradient>
+    <linearGradient id="grad-sem-warning-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309" />
+      <stop offset="100%" stop-color="#92400e" />
+    </linearGradient>
+    <linearGradient id="grad-sem-muted" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+    <linearGradient id="grad-sem-muted-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#475569" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+    <linearGradient id="grad-sem-neutral" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+    <linearGradient id="grad-sem-neutral-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <!-- @svg-palette-defs:end -->
     <style>
-      .hdr { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13.5px; font-weight: bold; fill: #004B96; text-anchor: middle; }
-      .sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; fill: #475569; text-anchor: middle; }
-      .lbl { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; font-weight: bold; text-anchor: middle; }
-      .code { font-family: 'Consolas', monospace; font-size: 11px; font-weight: bold; text-anchor: middle; }
+      
+/* @svg-palette:start */
+      .sem-primary { fill: url(#grad-sem-primary); stroke: #2563eb; }
+      .sem-primary-bg { fill: url(#grad-sem-primary); stroke: none; }
+      .sem-primary-stroke { stroke: #2563eb; }
+      .sem-primary-fill { fill: url(#grad-sem-primary-fill); }
+      .sem-primary-text { fill: #1e40af; }
+      .sem-info { fill: url(#grad-sem-info); stroke: #0369a1; }
+      .sem-info-bg { fill: url(#grad-sem-info); stroke: none; }
+      .sem-info-stroke { stroke: #0369a1; }
+      .sem-info-fill { fill: url(#grad-sem-info-fill); }
+      .sem-info-text { fill: #075985; }
+      .sem-success { fill: url(#grad-sem-success); stroke: #15803d; }
+      .sem-success-bg { fill: url(#grad-sem-success); stroke: none; }
+      .sem-success-stroke { stroke: #15803d; }
+      .sem-success-fill { fill: url(#grad-sem-success-fill); }
+      .sem-success-text { fill: #166534; }
+      .sem-warning { fill: url(#grad-sem-warning); stroke: #b45309; }
+      .sem-warning-bg { fill: url(#grad-sem-warning); stroke: none; }
+      .sem-warning-stroke { stroke: #b45309; }
+      .sem-warning-fill { fill: url(#grad-sem-warning-fill); }
+      .sem-warning-text { fill: #92400e; }
+      .sem-muted { fill: url(#grad-sem-muted); stroke: #94a3b8; }
+      .sem-muted-bg { fill: url(#grad-sem-muted); stroke: none; }
+      .sem-muted-stroke { stroke: #94a3b8; }
+      .sem-muted-fill { fill: url(#grad-sem-muted-fill); }
+      .sem-muted-text { fill: #334155; }
+      .sem-neutral { fill: url(#grad-sem-neutral); stroke: #334155; }
+      .sem-neutral-bg { fill: url(#grad-sem-neutral); stroke: none; }
+      .sem-neutral-stroke { stroke: #334155; }
+      .sem-neutral-fill { fill: url(#grad-sem-neutral-fill); }
+      .sem-neutral-text { fill: #0f172a; }
+      /* @svg-palette:end */
+.hdr { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; font-weight: bold;  text-anchor: middle; }
+      .sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11.5px;  text-anchor: middle; }
+      .lbl { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11.5px; font-weight: bold; text-anchor: middle; }
+      .code { font-family: 'Consolas', monospace; font-size: 11.5px; font-weight: bold; text-anchor: middle; }
     </style>
   </defs>
 
-  <rect width="260" height="420" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
-  <text x="130" y="24" class="hdr">Zeilen-Padding &amp; Stride</text>
-  <text x="130" y="41" class="sub">1D-Speicherblöcke im RAM</text>
 
   <!-- Row 0 -->
   <g transform="translate(16, 56)">
-    <text x="114" y="13" class="lbl" style="fill: #334155;">Zeile y = 0 (Start: Offset 0)</text>
-    <rect x="0" y="20" width="172" height="36" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
-    <text x="86" y="42" class="lbl" style="fill: #1e40af;">Nutzdaten (Breite × 4)</text>
-    <rect x="176" y="20" width="52" height="36" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,2" />
-    <text x="202" y="42" class="lbl" style="fill: #b45309;">Pad</text>
+    <text x="114" y="13" class="lbl sem-neutral-text" >Zeile y = 0 (Start: Offset 0)</text>
+    <rect class="sem-primary" x="0" y="20" width="172" height="36" rx="4" stroke-width="1.5" />
+    <text x="86" y="42" class="lbl sem-primary-text" >Nutzdaten (Breite × 4)</text>
+    <rect class="sem-warning" x="176" y="20" width="52" height="36" rx="4" stroke-width="1.5" stroke-dasharray="3,2" />
+    <text x="202" y="42" class="lbl sem-warning-text" >Pad</text>
     <!-- Stride Bracket -->
-    <line x1="0" y1="64" x2="228" y2="64" stroke="#0284c7" stroke-width="1.5" />
-    <line x1="0" y1="60" x2="0" y2="68" stroke="#0284c7" stroke-width="1.5" />
-    <line x1="228" y1="60" x2="228" y2="68" stroke="#0284c7" stroke-width="1.5" />
-    <text x="114" y="79" class="code" style="fill: #0369a1;">◄─── 1 × Stride ───►</text>
+    <line class="sem-info-stroke" x1="0" y1="64" x2="228" y2="64" stroke-width="1.5" />
+    <line class="sem-info-stroke" x1="0" y1="60" x2="0" y2="68" stroke-width="1.5" />
+    <line class="sem-info-stroke" x1="228" y1="60" x2="228" y2="68" stroke-width="1.5" />
+    <text x="114" y="79" class="code sem-info-text" >◄─── 1 × Stride ───►</text>
   </g>
 
   <!-- Row 1 -->
   <g transform="translate(16, 154)">
-    <text x="114" y="13" class="lbl" style="fill: #334155;">Zeile y = 1 (Start: 1 · Stride)</text>
-    <rect x="0" y="20" width="172" height="36" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
-    <text x="86" y="42" class="lbl" style="fill: #1e40af;">Nutzdaten (Breite × 4)</text>
-    <rect x="176" y="20" width="52" height="36" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,2" />
-    <text x="202" y="42" class="lbl" style="fill: #b45309;">Pad</text>
-    <line x1="0" y1="64" x2="228" y2="64" stroke="#0284c7" stroke-width="1.5" />
-    <line x1="0" y1="60" x2="0" y2="68" stroke="#0284c7" stroke-width="1.5" />
-    <line x1="228" y1="60" x2="228" y2="68" stroke="#0284c7" stroke-width="1.5" />
-    <text x="114" y="79" class="code" style="fill: #0369a1;">◄─── 1 × Stride ───►</text>
+    <text x="114" y="13" class="lbl sem-neutral-text" >Zeile y = 1 (Start: 1 · Stride)</text>
+    <rect class="sem-primary" x="0" y="20" width="172" height="36" rx="4" stroke-width="1.5" />
+    <text x="86" y="42" class="lbl sem-primary-text" >Nutzdaten (Breite × 4)</text>
+    <rect class="sem-warning" x="176" y="20" width="52" height="36" rx="4" stroke-width="1.5" stroke-dasharray="3,2" />
+    <text x="202" y="42" class="lbl sem-warning-text" >Pad</text>
+    <line class="sem-info-stroke" x1="0" y1="64" x2="228" y2="64" stroke-width="1.5" />
+    <line class="sem-info-stroke" x1="0" y1="60" x2="0" y2="68" stroke-width="1.5" />
+    <line class="sem-info-stroke" x1="228" y1="60" x2="228" y2="68" stroke-width="1.5" />
+    <text x="114" y="79" class="code sem-info-text" >◄─── 1 × Stride ───►</text>
   </g>
 
   <!-- Row 2 -->
   <g transform="translate(16, 252)">
-    <text x="114" y="13" class="lbl" style="fill: #334155;">Zeile y = 2 (Start: 2 · Stride)</text>
-    <rect x="0" y="20" width="172" height="36" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
-    <text x="86" y="42" class="lbl" style="fill: #1e40af;">Nutzdaten (Breite × 4)</text>
-    <rect x="176" y="20" width="52" height="36" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,2" />
-    <text x="202" y="42" class="lbl" style="fill: #b45309;">Pad</text>
+    <text x="114" y="13" class="lbl sem-neutral-text" >Zeile y = 2 (Start: 2 · Stride)</text>
+    <rect class="sem-primary" x="0" y="20" width="172" height="36" rx="4" stroke-width="1.5" />
+    <text x="86" y="42" class="lbl sem-primary-text" >Nutzdaten (Breite × 4)</text>
+    <rect class="sem-warning" x="176" y="20" width="52" height="36" rx="4" stroke-width="1.5" stroke-dasharray="3,2" />
+    <text x="202" y="42" class="lbl sem-warning-text" >Pad</text>
   </g>
 
   <!-- Summary Footer -->
-  <rect x="16" y="332" width="228" height="72" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5" />
-  <text x="130" y="352" class="lbl" style="fill: #166534;">Warum Padding?</text>
-  <text x="130" y="370" class="sub" style="fill: #15803d;">Jede neue Zeile startet exakt</text>
-  <text x="130" y="385" class="sub" style="fill: #15803d;">auf einer schnellen 4/8-Byte</text>
-  <text x="130" y="399" class="sub" style="fill: #15803d; font-weight: bold;">Speichergrenze (Alignment)!</text>
+  <rect class="sem-success" x="16" y="332" width="228" height="72" rx="6" stroke-width="1.5" />
+  <text x="130" y="352" class="lbl sem-success-text" >Warum Padding?</text>
+  <text x="130" y="370" class="sub sem-muted-text sem-success-text" >Jede neue Zeile startet exakt</text>
+  <text x="130" y="385" class="sub sem-muted-text sem-success-text" >auf einer schnellen 4/8-Byte</text>
+  <text x="130" y="399" class="sub sem-muted-text sem-success-text" style="font-weight: bold;">Speichergrenze (Alignment)!</text>
 </svg>

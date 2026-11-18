@@ -6,7 +6,8 @@
 ---
 
 ## 1. Artefakte, Vorgreif-Sperre & Kapitel-Schnittstellen
-- **Foliensatz:** [`Folien/Folien.md`](./Folien/Folien.md)
+- **Foliensätze:** [`Folien/Folien.md`](./Folien/Folien.md) (+ [`Folien_Anhang_A_Waermeleitung_FDM.md`](./Folien/Folien_Anhang_A_Waermeleitung_FDM.md))
+- **Abgrenzung Hauptdeck vs. Anhang (optional fürs Selbststudium):** *Hauptdeck (`Folien.md`):* Speicherlayout (`Stride`, `Bgra32`), `WriteableBitmap` (`uint*`, 256-LUT), 5-Punkt-FDM, $s \le 0{,}25$ und die für Übung/Quiz nötigen Randbedingungen (Dirichlet, Neumann, Robin-Regel). *Anhang A (`Folien_Anhang_A_Waermeleitung_FDM.md`):* Thermodynamische Grundgrößen ($\lambda, \rho c_p$), Elektro-/Hydraulik-Analogie, vollständige Herleitung des Fourierschen Gesetzes und detaillierte Bilanzherleitung der Robin-Gitterformel.
 - **Übungsblatt & Vorlage:** [`Aufgabenblatt.md`](./Uebung/Aufgabenblatt.md) | **Moodle-Text:** [`Text.md`](./Moodle/Text.md) | [`PixelHeatFDM.sln`](./Uebung/Vorlage/PixelHeatFDM.sln)
 - **Vorgreif-Sperre (Technologie-Stand T02):** WPF `WriteableBitmap`, `unsafe`-Pointer, 2D-FDM. *Strikte Tabus:* Kein WPF Canvas, kein `ScottPlot`, kein `Parallel.For` (erst T06).
 - **Kapitel-Brücken & Quiz-Zuordnung:**
@@ -21,11 +22,11 @@
 
 ## 3. Zweistufige Hausübung (`Einheit 02`) & Showcase-Fokus
 - **Stufe 1 – Basisaufgabe (`1.1`–`1.4`):**
-  - `1.1`: Vorberechnete 256-Stufen-Farbtabelle (`ThermalColorMap`, Blau $\to$ Cyan $\to$ Grün $\to$ Gelb $\to$ Rot) für $\mathcal{O}(1)$-Lookup aufbauen.
-  - `1.2`: Ortsabhängiges Temperaturleitfähigkeits-Gitter (`AlphaMap`) mit adiabaten Neumann-Spiegelungen an Isolator-Hindernissen ($\alpha = 0$) im 5-Punkt-Stern umsetzen.
-  - `1.3`: Interaktives Maus-Zeichnen von Wärmequellen und Isolatorwänden über `WriteableBitmap.Lock()` und `BackBuffer` anbinden.
-  - `1.4`: Stationäre Wärmebilanz und LUT-Zuordnung mit `dotnet test` prüfen.
+  - `1.1`: Experimenteller Von-Neumann-Stabilitätstest ($s > 0{,}25$, Schachbrett-Oszillation vs. $\Delta t_{\text{krit}} = 2{,}5\,\text{ms}$) und Vergleich von Dirichlet- vs. Neumann-Rand.
+  - `1.2`: Vorberechnete 256-Stufen-Farbtabelle (`uint[256] _colorLut` in `BitmapHeatRenderer.cs`) für allokationsfreien $\mathcal{O}(1)$-Lookup aufbauen.
+  - `1.3`: Ortsabhängiges Temperaturleitfähigkeits-Gitter (`_alphaMap`) mit adiabater Neumann-Spiegelung an Isolator-Hindernissen ($\alpha = 0$) sowie interaktives Maus-Zeichnen von Wärmequellen und Wänden umsetzen.
+  - `1.4`: Automatisierte Verifikation der 1-Schritt-Referenzwerte, der Farbtabelle und der adiabaten Isolatorwand in `PixelHeatFDM.Tests` via `dotnet test`.
 - **Stufe 2 – Wahlmodell (10 Pkt.):**
   - **Track A (`A.1`–`A.4` – CPU-Kühlkörper-Optimierung):** Mehrzonen-Gitter (Silizium-Chip, Kupfer-Heatspreader, Alu-Finne), konvektive Robin-Randbedingung am oberen Rand (Lüfter Aus vs. Ein) und experimenteller Nachweis der Schachbrett-Explosion bei $s > 0{,}25$.
-  - **Track B (`B.1`–`B.4` – Falling Sand & Doom Fire / Lava):** Zelluläre Partikel-Physik (Sand-Böschung, Wasser-Verdampfung bei $100\,^\circ\text{C}$, Lava-Wärmequellen) gekoppelt mit aufsteigender Konvektionsglut im FDM-Temperaturfeld.
+  - **Track B (`B.1`–`B.4` – Falling Sand & Doom Fire / Lava):** Zelluläre Partikel-Physik (Sand-Böschung, Holz-Abbrand zu Asche & Lava-Erstarrung zu Stein, Lava-Wärmequellen) gekoppelt mit aufsteigender Konvektionsglut im FDM-Temperaturfeld.
 - **Showcase- & Code-Defense-Fokus (zu Beginn von T03):** Live-Stresstest mit $s = 0{,}28 > 0{,}25$ (echte Schachbrett-Oszillation vs. künstliches `Math.Clamp`), Stride-Berechnung (`width * 4`) und Double-Buffering (`_tCurrent` $\leftrightarrow$ `_tNext`).

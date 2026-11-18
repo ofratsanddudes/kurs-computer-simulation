@@ -25,6 +25,8 @@ math: mathjax
 
 ---
 
+<!-- _class: showcase -->
+
 ### Live-Showcase & Code-Defense: Termin 07
 
 Präsentation der Hausübung aus Termin 07 (**Stufe 1: Basisaufgabe** + **Stufe 2: Track A oder B**, [Aufgabenblatt 07](../../07_Statik_FEM_Cholesky/Uebung/Aufgabenblatt.md)):
@@ -56,6 +58,29 @@ Präsentation der Hausübung aus Termin 07 (**Stufe 1: Basisaufgabe** + **Stufe 
 
 ---
 
+<!-- _class: recap -->
+
+### Kontext & Einordnung: Von statischen Gleichgewichten zur gekoppelten Dynamik
+
+<div class="columns top">
+<div class="three">
+
+In **Termin 07** lösten wir das Gleichgewicht ($\sum \vec{F} = \mathbf{0} \implies \mathbf{K}\mathbf{u} = \mathbf{f}$) – was passiert bei Kräften im Ungleichgewicht?
+
+- **Von Statik zu Bewegung:** Wirkt $\sum \vec{F} = m \cdot \ddot{\mathbf{x}} \neq \mathbf{0}$, entsteht ein **DGL-System (ODE)** im Zustandsraum: $\dot{\mathbf{x}}(t) = \mathbf{f}(t, \mathbf{x}(t), \mathbf{u}(t))$.
+- **Brücke zu T01 & T04:** Nach Eulers Schwingungs-Instabilität (T01) bauen wir eine **S-Function-Architektur** mit **RK4** & **PID** (Anti-Windup).
+- **Visualisierung:** Live-Trajektorien plotten wir direkt mit `ScottPlot 5` (T04).
+
+</div>
+<div class="two">
+
+![](./Diagramme/Semester_Bruecke_T08.svg)
+
+</div>
+</div>
+
+---
+
 ## 8.1: Grundlagen und Definitionen
 
 Dieser Abschnitt umfasst die folgenden Inhalte:
@@ -65,19 +90,6 @@ Dieser Abschnitt umfasst die folgenden Inhalte:
 - Die Zustandsraumdarstellung
 - Umwandlung von Differentialgleichungen höherer Ordnung
 - Analytische vs. numerische Lösungsansätze
-
----
-
-### Rückblick & Brücke: Wo stehen wir in der Vorlesung?
-
-In **Termin 07** haben wir Systeme im statischen Ruhezustand ($\sum \vec{F} = \mathbf{0} \implies \mathbf{K}\mathbf{u} = \mathbf{f}$) gelöst – was passiert jedoch, wenn Kräfte **nicht** im Gleichgewicht stehen?
-
-- **Vom Gleichgewicht (Termin 07) zur Bewegung (Termin 08):**
-  - Sobald eine resultierende Kraft wirkt (z.B. Lastsprung am Servomotor, Zünden eines Raketentriebwerks), beschleunigt die Masse gemäß Newton ($\sum \vec{F} = m \cdot \ddot{\mathbf{x}} \neq \mathbf{0}$).
-  - Aus dem algebraischen Gleichungssystem wird ein **System gekoppelter Differentialgleichungen (ODEs)** im Zustandsraum: $\dot{\mathbf{x}}(t) = \mathbf{f}(t, \mathbf{x}(t), \mathbf{u}(t))$.
-- **Brücke zurück zu Termin 01, 04 und 06:**
-  - In **Termin 01** sahen wir bereits, wie schnell der naive Euler-Integrator bei Schwingungen explodiert.
-  - Heute entwickeln wir eine modulare **S-Function-Solver-Architektur** mit **Runge-Kutta 4 (RK4)** und geschlossenem **PID-Regelkreis** (inkl. Anti-Windup) und plotten die Trajektorien live mit `ScottPlot 5` (T04).
 
 ---
 
@@ -1818,6 +1830,8 @@ while (solver.Time <= 0.6) // 600 ms Regelung
 
 ---
 
+<!-- _class: summary -->
+
 # Zusammenfassung Kapitel 8
 
 - **Kontinuierliche dynamische Modelle** beschreiben Systeme mit kontinuierlicher Zeitentwicklung mittels **Differentialgleichungen**.
@@ -1829,6 +1843,19 @@ while (solver.Time <= 0.6) // 600 ms Regelung
 - **Mechatronischer Regelkreis & Anti-Windup:** Reale Aktorbegrenzung erfordert Clamping-Logik zur Verhinderung von Integrator-Windup; RK4 löst gekoppelte Zustände mit hoher Robustheit.
 
 ---
+
+<!-- _class: outlook -->
+
+### Ausblick: Von stetigen Zeitschritten zu diskreten Ereignissen (Termin 09)
+
+Mit S-Functions, RK4 und PID-Regelung simulieren wir nun beliebige **kontinuierliche Systeme** mit festem Zeittakt $\Delta t$ – warum stößt das bei Produktionsanlagen an Grenzen?
+
+- **Leerlauf-Problem:** In Fabriken oder Warteschlangen passiert oft minutenlang nichts, bis zu einem exakten Zeitpunkt $t_e$ ein Werkstück eintrifft oder eine Maschine ausfällt.
+- **Nächster Schritt (Termin 09):** Wir springen mit einer **Ereignis-Warteschlange (`PriorityQueue`)** direkt von Event zu Event (**Discrete Event Simulation**) und parallelisieren Monte-Carlo-Läufe via TPL (T06)!
+
+---
+
+<!-- _class: homework -->
 
 ### Hausübung Termin 08: DGL-Solver, S-Functions & Anti-Windup
 

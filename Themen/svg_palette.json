@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Single Source of Truth für semantische SVG-Farbklassen & Gradienten. Neue Rollen hier ergänzen und anschließend 'npm run sync:svg-palette' ausführen.",
+  "roles": {
+    "sem-primary": {
+      "description": "Aktiver Datenpfad, reguläre Prozessschritte, primäre Hervorhebung",
+      "fill": "#eff6ff",
+      "fillEnd": "#dbeafe",
+      "stroke": "#2563eb",
+      "solidFill": "#2563eb",
+      "solidFillEnd": "#1d4ed8",
+      "text": "#1e40af"
+    },
+    "sem-info": {
+      "description": "Sekundäre Datenreihe, Kamera-/Weltachsen, Geschwindigkeitsvektoren",
+      "fill": "#f0f9ff",
+      "fillEnd": "#bae6fd",
+      "stroke": "#0369a1",
+      "solidFill": "#0369a1",
+      "solidFillEnd": "#075985",
+      "text": "#075985"
+    },
+    "sem-success": {
+      "description": "Zieltreffer, korrekter Pfad, Optimierungserfolg, validierte Lösung",
+      "fill": "#f0fdf4",
+      "fillEnd": "#dcfce7",
+      "stroke": "#15803d",
+      "solidFill": "#15803d",
+      "solidFillEnd": "#166534",
+      "text": "#166534"
+    },
+    "sem-warning": {
+      "description": "Zwischenzustand, aktuell geprüfter Index, Hinweis, Grenzfall",
+      "fill": "#fffbeb",
+      "fillEnd": "#fef3c7",
+      "stroke": "#b45309",
+      "solidFill": "#b45309",
+      "solidFillEnd": "#92400e",
+      "text": "#92400e"
+    },
+    "sem-danger": {
+      "description": "Fehlerfall, ausgeschlossener Bereich, Engpass, Divergenz",
+      "fill": "#fef2f2",
+      "fillEnd": "#fee2e2",
+      "stroke": "#dc2626",
+      "solidFill": "#dc2626",
+      "solidFillEnd": "#b91c1c",
+      "text": "#991b1b"
+    },
+    "sem-accent": {
+      "description": "Sonderkräfte, Transformationen, Hervorhebung außerhalb der Hauptachse",
+      "fill": "#f5f3ff",
+      "fillEnd": "#ede9fe",
+      "stroke": "#7c3aed",
+      "solidFill": "#7c3aed",
+      "solidFillEnd": "#6d28d9",
+      "text": "#6d28d9"
+    },
+    "sem-card": {
+      "description": "Äußere Diagramm-Karten und dezente Panel-Hintergründe",
+      "fill": "#ffffff",
+      "fillEnd": "#f1f5f9",
+      "stroke": "#cbd5e1",
+      "text": "#1e293b"
+    },
+    "sem-muted": {
+      "description": "Ignorierte, inaktive, abgeschlossene oder Hintergrund-Elemente",
+      "fill": "#f8fafc",
+      "fillEnd": "#e2e8f0",
+      "stroke": "#94a3b8",
+      "solidFill": "#475569",
+      "solidFillEnd": "#334155",
+      "text": "#334155"
+    },
+    "sem-neutral": {
+      "description": "Neutrale Container, Achsen, Rahmen und Standard-Beschriftungen",
+      "fill": "#ffffff",
+      "fillEnd": "#f8fafc",
+      "stroke": "#334155",
+      "solidFill": "#334155",
+      "solidFillEnd": "#1e293b",
+      "text": "#0f172a"
+    }
+  }
+}

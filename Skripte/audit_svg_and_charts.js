@@ -10,6 +10,114 @@
 
 const fs = require('fs');
 const path = require('path');
+const { loadPalette, syncSvgContent, START_MARKER } = require('./sync_svg_palette');
+
+let SVG_PALETTE = null;
+try { SVG_PALETTE = loadPalette(); } catch (e) {}
+
+function checkSemanticPalette(svgPath) {
+  if (!SVG_PALETTE) return [];
+  const raw = fs.readFileSync(svgPath, 'utf8');
+  const paletteIssues = [];
+  const unknownClasses = new Set();
+  let usesSemantic = raw.includes(START_MARKER);
+
+  const classAttrRegex = /class\s*=\s*["']([^"']+)["']/g;
+  let m;
+  while ((m = classAttrRegex.exec(raw)) !== null) {
+    for (const token of m[1].split(/\s+/)) {
+      if (!token.startsWith('sem-')) continue;
+      usesSemantic = true;
+      const base = token.replace(/-(stroke|fill|bg|text)$/, '');
+      if (!SVG_PALETTE.roles[base]) unknownClasses.add(token);
+    }
+  }
+
+  for (const cls of unknownClasses) {
+    paletteIssues.push({
+      type: 'UNKNOWN_SEMANTIC_CLASS',
+      message: `Unbekannte semantische SVG-Klasse '.${cls}' (nicht in Themen/svg_palette.json definiert).`
+    });
+  }
+
+  const isMermaid = /#my-svg|aria-roledescription=/i.test(raw);
+  const isTikz = /\.tikz\.svg$/i.test(svgPath);
+  const isDiagramSvg = /[\\/]Diagramme[\\/]/i.test(svgPath);
+
+  if (usesSemantic) {
+    if (syncSvgContent(raw, SVG_PALETTE).changed) {
+      paletteIssues.push({
+        type: 'STALE_SVG_PALETTE',
+        message: `SVG-Farbklassen sind nicht synchron mit Themen/svg_palette.json ('npm run sync:svg-palette' ausführen).`
+      });
+    }
+  }
+
+  if (usesSemantic || (isDiagramSvg && !isMermaid && !isTikz)) {
+    const withoutManaged = raw
+      .replace(/\/\*\s*@svg-palette:start\s*\*\/[\s\S]*?\/\*\s*@svg-palette:end\s*\*\//g, '')
+      .replace(/<(?:linearGradient|radialGradient|filter)\b[\s\S]*?<\/(?:linearGradient|radialGradient|filter)>/gi, '');
+    const colorMatches = withoutManaged.match(/(?:fill|stroke|color)\s*[:=]\s*["']?\s*(#[0-9a-fA-F]{3,8}|(?:rgb|hsl|oklch|oklab)\([^)]+\))/gi) || [];
+    const forbidden = colorMatches.filter(c => !/#(?:fff(?:fff)?|000(?:000)?)\b/i.test(c));
+    if (forbidden.length > 0) {
+      paletteIssues.push({
+        type: 'HARDCODED_SVG_COLOR',
+        message: `Hartcodierte Farbe(n) gefunden (${forbidden.slice(0, 3).join(', ')}). Bitte sem-* Klassen aus Themen/svg_palette.json nutzen.`
+      });
+    }
+  }
+
+  // 2. Kein rahmenloses, vollflächiges weißes/helles Hintergrund-<rect> (stört CSS drop-shadow & Highlight-Folien)
+  const vbMatch = raw.match(/viewBox\s*=\s*["']\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)\s*["']/i);
+  const firstRectMatch = raw.match(/<rect\b[^>]*>/i);
+  if (firstRectMatch) {
+    const r = firstRectMatch[0];
+    const hasLightFill = /fill\s*=\s*["']\s*(?:#fff(?:fff)?|white|#f8fafc|#f1f5f9|#fafafa)\s*["']/i.test(r);
+    const hasStroke = /\bstroke\s*=\s*["'](?!none|transparent)/i.test(r) || /\bclass\s*=\s*["'][^"']*\bsem-(?:primary|info|success|warning|danger|accent|card|muted|neutral)\b/i.test(r);
+    if (hasLightFill && !hasStroke) {
+      const wMatch = r.match(/\bwidth\s*=\s*["']\s*([\d.]+%?)\s*["']/i);
+      const hMatch = r.match(/\bheight\s*=\s*["']\s*([\d.]+%?)\s*["']/i);
+      const isFullW = wMatch && (wMatch[1] === '100%' || (vbMatch && parseFloat(wMatch[1]) >= parseFloat(vbMatch[1]) * 0.9));
+      const isFullH = hMatch && (hMatch[1] === '100%' || (vbMatch && parseFloat(hMatch[1]) >= parseFloat(vbMatch[2]) * 0.9));
+      if (isFullW && isFullH) {
+        paletteIssues.push({
+          type: 'OPAQUE_BG_RECT',
+          message: 'Rahmenloses, vollflächiges weißes/helles Hintergrund-<rect> gefunden. SVG-Canvas muss transparent bleiben (oder abgerundete Karte mit stroke).'
+        });
+      }
+    }
+  }
+
+  // 3. Kein fast vollflächiger äußerer Rahmen (<rect> >= 80% der viewBox) in handgezeichneten Diagrammen
+  if (isDiagramSvg && !isMermaid && !isTikz && vbMatch) {
+    const vbW = parseFloat(vbMatch[1]);
+    const vbH = parseFloat(vbMatch[2]);
+    const allRects = raw.match(/<rect\b[^>]*>/gi) || [];
+    const outerFrames = allRects.filter(r => {
+      const wm = r.match(/\bwidth\s*=\s*["']\s*([\d.]+%?)\s*["']/i);
+      const hm = r.match(/\bheight\s*=\s*["']\s*([\d.]+%?)\s*["']/i);
+      if (!wm || !hm) return false;
+      const w = wm[1].endsWith('%') ? (parseFloat(wm[1]) / 100) * vbW : parseFloat(wm[1]);
+      const h = hm[1].endsWith('%') ? (parseFloat(hm[1]) / 100) * vbH : parseFloat(hm[1]);
+      if (w < vbW * 0.8 || h < vbH * 0.8) return false;
+      const isFillNone = /\bfill\s*=\s*["'](?:none|transparent)["']/i.test(r);
+      const hasStrokeAttr = /\bstroke\s*=\s*["'](?!none|transparent)/i.test(r);
+      const hasSemClass = /\bclass\s*=\s*["'][^"']*\bsem-/i.test(r);
+      return !(isFillNone && !hasStrokeAttr && !hasSemClass);
+    });
+    if (outerFrames.length > 0) {
+      paletteIssues.push({
+        type: 'OUTER_FRAME_RECT',
+        message: 'Fast vollflächiger äußerer Rahmen (<rect> >= 80% der viewBox) gefunden. Diagramme ohne äußeren Kasten direkt/organisch auf die Folie einbetten.'
+      });
+    }
+  }
+
+  // 4. Kein eingebetteter Folientitel/-untertitel im SVG (wird unten im DOM als direktes <svg>-Kind geprüft)
+  const checkEmbeddedTitleInDom = isDiagramSvg && !isMermaid && !isTikz;
+
+  return paletteIssues;
+}
 
 const CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const PUPPETEER_PATH = path.join(process.env.APPDATA || 'C:/Users/P28500/AppData/Roaming', 'npm/node_modules/@mermaid-js/mermaid-cli/node_modules/puppeteer');
@@ -35,13 +143,16 @@ async function auditSvgFile(browser, svgPath, options = {}) {
     return { path: svgPath, error: 'Failed to load SVG: ' + e.message, issues: [] };
   }
 
-  const analysis = await page.evaluate(() => {
+  const analysis = await page.evaluate(({ checkEmbeddedTitleInDom, isMini }) => {
     const issues = [];
+    const parserError = document.querySelector('parsererror');
+    if (parserError) {
+      const errText = parserError.innerText.trim().replace(/\s+/g, ' ');
+      return { hasSvg: false, issues: [{ type: 'XML_PARSE_ERROR', message: errText }] };
+    }
     const svg = document.querySelector('svg');
     if (!svg) {
-      const parserError = document.querySelector('parsererror');
-      const errText = parserError ? parserError.innerText.trim().replace(/\s+/g, ' ') : 'No <svg> root element found (XML parsing failed)';
-      return { hasSvg: false, issues: [{ type: 'XML_PARSE_ERROR', message: errText }] };
+      return { hasSvg: false, issues: [{ type: 'XML_PARSE_ERROR', message: 'No <svg> root element found (XML parsing failed)' }] };
     }
 
     const svgRect = svg.getBoundingClientRect();
@@ -147,6 +258,46 @@ async function auditSvgFile(browser, svgPath, options = {}) {
         type: 'VIEWBOX_CLIPPING',
         message: `${outOfBoundsCount} element(s) render outside SVG viewport bounds`
       });
+    }
+
+    // 2b. Excessive Transparent Margin Check in SVG viewBox user units (ohne Browser-Letterboxing)
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const rootCtm = svg.getScreenCTM();
+    if (vb && vb.width > 0 && vb.height > 0 && rootCtm) {
+      const inv = rootCtm.inverse();
+      let uMinX = Infinity, uMinY = Infinity, uMaxX = -Infinity, uMaxY = -Infinity;
+      Array.from(svg.querySelectorAll('rect, circle, ellipse, polygon, polyline, path, line, text')).forEach(el => {
+        if (el.closest('defs, clipPath, marker')) return;
+        const st = window.getComputedStyle(el);
+        if (st.display === 'none' || st.visibility === 'hidden' || parseFloat(st.opacity || '1') === 0) return;
+        const hasFill = st.fill && st.fill !== 'none' && st.fill !== 'transparent' && parseFloat(st.fillOpacity || '1') > 0;
+        const hasStroke = st.stroke && st.stroke !== 'none' && st.stroke !== 'transparent' && parseFloat(st.strokeWidth || '0') > 0;
+        if (!hasFill && !hasStroke) return;
+        const b = el.getBoundingClientRect();
+        if (b.width <= 0 && b.height <= 0) return;
+        const corners = [
+          new DOMPoint(b.left, b.top).matrixTransform(inv),
+          new DOMPoint(b.right, b.bottom).matrixTransform(inv)
+        ];
+        uMinX = Math.min(uMinX, corners[0].x, corners[1].x);
+        uMinY = Math.min(uMinY, corners[0].y, corners[1].y);
+        uMaxX = Math.max(uMaxX, corners[0].x, corners[1].x);
+        uMaxY = Math.max(uMaxY, corners[0].y, corners[1].y);
+      });
+      if (uMinX < Infinity) {
+        const padT = Math.max(0, uMinY - vb.y);
+        const padB = Math.max(0, (vb.y + vb.height) - uMaxY);
+        const padL = Math.max(0, uMinX - vb.x);
+        const padR = Math.max(0, (vb.x + vb.width) - uMaxX);
+        const maxVPad = Math.max(28, vb.height * 0.09);
+        const maxHPad = Math.max(28, vb.width * 0.09);
+        if (padT > maxVPad || padB > maxVPad || padL > maxHPad || padR > maxHPad) {
+          issues.push({
+            type: 'EXCESSIVE_SVG_MARGIN',
+            message: `Zu große transparente Ränder (T:${Math.round(padT)} B:${Math.round(padB)} L:${Math.round(padL)} R:${Math.round(padR)}). viewBox enger zuschneiden.`
+          });
+        }
+      }
     }
 
     // 3. Pairwise Text-Text Collisions (AABB Intersection)
@@ -315,6 +466,93 @@ async function auditSvgFile(browser, svgPath, options = {}) {
                 message: `Unshielded line intersects text "${t.text.slice(0, 25)}"`
               });
             }
+          }
+        }
+      });
+
+      // 5b. Allgemeine Marker-/Pfeilspitzen-Kollision (<line>, <path>, <polyline> mit marker-end / marker-start)
+      const markerElements = Array.from(document.querySelectorAll('line, path, polyline')).filter(el => {
+        if (el.closest('defs, clipPath, marker')) return false;
+        const st = window.getComputedStyle(el);
+        if (st.display === 'none' || st.visibility === 'hidden' || parseFloat(st.opacity || '1') === 0) return false;
+        const sw = parseFloat(st.strokeWidth || '0');
+        if (!st.stroke || st.stroke === 'none' || st.stroke === 'transparent' || sw <= 0) return false;
+        const me = el.getAttribute('marker-end') || st.markerEnd;
+        const ms = el.getAttribute('marker-start') || st.markerStart;
+        return (me && me !== 'none') || (ms && ms !== 'none');
+      });
+
+      const markerBoxes = [];
+      markerElements.forEach(el => {
+        const ctm = el.getScreenCTM();
+        if (!ctm) return;
+        const st = window.getComputedStyle(el);
+        const sw = parseFloat(st.strokeWidth || '1.5');
+        const ctmScale = Math.hypot(ctm.a, ctm.b) || 1;
+        const getMarkerRadius = (markerVal) => {
+          const m = String(markerVal || '').match(/url\(#([^)]+)\)/);
+          const mEl = m ? document.getElementById(m[1]) : null;
+          const mw = mEl ? parseFloat(mEl.getAttribute('markerWidth') || '6') : 6;
+          const mh = mEl ? parseFloat(mEl.getAttribute('markerHeight') || '6') : 6;
+          return Math.max(4, Math.min(7, Math.max(mw, mh) * 0.8)) * ctmScale;
+        };
+        const toScreen = (pt) => ({
+          x: ctm.a * pt.x + ctm.c * pt.y + ctm.e,
+          y: ctm.b * pt.x + ctm.d * pt.y + ctm.f
+        });
+        let startPt = null, endPt = null;
+        if (el.tagName.toLowerCase() === 'line') {
+          startPt = { x: parseFloat(el.getAttribute('x1') || '0'), y: parseFloat(el.getAttribute('y1') || '0') };
+          endPt = { x: parseFloat(el.getAttribute('x2') || '0'), y: parseFloat(el.getAttribute('y2') || '0') };
+        } else if (typeof el.getTotalLength === 'function') {
+          try {
+            const len = el.getTotalLength();
+            if (len > 0) {
+              startPt = el.getPointAtLength(0);
+              endPt = el.getPointAtLength(len);
+            }
+          } catch (_) {}
+        }
+        const me = el.getAttribute('marker-end') || st.markerEnd;
+        const ms = el.getAttribute('marker-start') || st.markerStart;
+        if (endPt && me && me !== 'none') {
+          const p = toScreen(endPt);
+          const r = getMarkerRadius(me);
+          markerBoxes.push({ el, left: p.x - r, right: p.x + r, top: p.y - r, bottom: p.y + r, cx: p.x, cy: p.y });
+        }
+        if (startPt && ms && ms !== 'none') {
+          const p = toScreen(startPt);
+          const r = getMarkerRadius(ms);
+          markerBoxes.push({ el, left: p.x - r, right: p.x + r, top: p.y - r, bottom: p.y + r, cx: p.x, cy: p.y });
+        }
+      });
+
+      const markerSeen = new Set();
+      markerBoxes.forEach(mb => {
+        const xOv = Math.max(0, Math.min(t.rect.right, mb.right) - Math.max(t.rect.left, mb.left));
+        const yOv = Math.max(0, Math.min(t.rect.bottom, mb.bottom) - Math.max(t.rect.top, mb.top));
+        if (xOv >= 2 && yOv >= 2) {
+          const testX = Math.max(t.rect.left, Math.min(t.rect.right, mb.cx));
+          const testY = Math.max(t.rect.top, Math.min(t.rect.bottom, mb.cy));
+          const els = document.elementsFromPoint(testX, testY);
+          const tIdx = els.indexOf(t.el);
+          const lIdx = els.indexOf(mb.el);
+          let shielded = false;
+          if (tIdx !== -1 && lIdx !== -1) {
+            for (let k = Math.min(tIdx, lIdx) + 1; k < Math.max(tIdx, lIdx); k++) {
+              const st = window.getComputedStyle(els[k]);
+              if (st.fill && st.fill !== 'none' && st.fill !== 'transparent' && st.opacity !== '0' && st.fillOpacity !== '0') {
+                shielded = true;
+                break;
+              }
+            }
+          }
+          if (!shielded && !markerSeen.has(t.text)) {
+            markerSeen.add(t.text);
+            issues.push({
+              type: 'TEXT_MARKER_COLLISION',
+              message: `Arrow/marker collides with text "${t.text.slice(0, 25)}"`
+            });
           }
         }
       });
@@ -601,6 +839,251 @@ async function auditSvgFile(browser, svgPath, options = {}) {
       }
     });
 
+    // 7. WCAG 2.1 Text-to-Background Contrast Check
+    const parseColorStr = (str) => {
+      if (!str || str === 'none' || str === 'transparent') return null;
+      const m = str.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+      if (m) {
+        const a = m[4] !== undefined ? parseFloat(m[4]) : 1;
+        return { r: parseFloat(m[1]), g: parseFloat(m[2]), b: parseFloat(m[3]), a };
+      }
+      const hm = str.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+      if (hm) {
+        let h = hm[1];
+        if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+        return { r: parseInt(h.slice(0,2),16), g: parseInt(h.slice(2,4),16), b: parseInt(h.slice(4,6),16), a: 1 };
+      }
+      return null;
+    };
+    const blendOnWhite = (c) => {
+      if (!c) return { r: 255, g: 255, b: 255 };
+      const a = c.a !== undefined ? c.a : 1;
+      return {
+        r: c.r * a + 255 * (1 - a),
+        g: c.g * a + 255 * (1 - a),
+        b: c.b * a + 255 * (1 - a)
+      };
+    };
+    const relLum = (c) => {
+      const lin = (v) => {
+        const s = v / 255;
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+      };
+      return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+    };
+    const contrastRatio = (c1, c2) => {
+      const l1 = relLum(c1), l2 = relLum(c2);
+      return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    };
+    const resolveBgCandidates = (fillStr, fillOp = 1) => {
+      if (!fillStr || fillStr === 'none' || fillStr === 'transparent') return null;
+      const urlM = fillStr.match(/url\(\s*["']?#([^"')]+)["']?\s*\)/i);
+      if (urlM) {
+        const grad = document.getElementById(urlM[1]);
+        if (grad) {
+          const stops = Array.from(grad.querySelectorAll('stop'));
+          const cols = stops.map(st => {
+            const sc = window.getComputedStyle(st).stopColor || st.getAttribute('stop-color');
+            const p = parseColorStr(sc);
+            if (p) p.a *= fillOp;
+            return p;
+          }).filter(Boolean).map(blendOnWhite);
+          if (cols.length > 0) return cols;
+        }
+        return null;
+      }
+      const parsed = parseColorStr(fillStr);
+      if (!parsed || parsed.a * fillOp === 0) return null;
+      parsed.a *= fillOp;
+      return [blendOnWhite(parsed)];
+    };
+
+    const CHROMATIC_ROLES = new Set(['primary', 'info', 'success', 'warning', 'danger', 'accent']);
+    const getSemRole = (el, regex) => {
+      if (!el || !el.getAttribute) return null;
+      for (const c of (el.getAttribute('class') || '').split(/\s+/)) {
+        const m = c.match(regex);
+        if (m && CHROMATIC_ROLES.has(m[1])) return m[1];
+      }
+      return null;
+    };
+    const getBgInfoAtPoint = (x, y, selfEl) => {
+      const stack = document.elementsFromPoint(x, y);
+      const tIdx = selfEl ? stack.indexOf(selfEl) : -1;
+      const startIdx = tIdx !== -1 ? tIdx + 1 : 0;
+      for (let i = startIdx; i < stack.length; i++) {
+        const bgEl = stack[i];
+        const bTag = bgEl.tagName ? bgEl.tagName.toLowerCase() : '';
+        if (!['rect', 'circle', 'ellipse', 'polygon', 'path'].includes(bTag)) continue;
+        const bStyle = window.getComputedStyle(bgEl);
+        const op = parseFloat(bStyle.opacity || '1');
+        const fop = parseFloat(bStyle.fillOpacity || '1');
+        if (bStyle.display === 'none' || bStyle.visibility === 'hidden' || op === 0 || fop === 0) continue;
+        const cands = resolveBgCandidates(bStyle.fill, op * fop);
+        if (cands) return { cands, bgEl };
+      }
+      return { cands: [{ r: 255, g: 255, b: 255 }], bgEl: null };
+    };
+    const getBgCandidatesAtPoint = (x, y, selfEl) => getBgInfoAtPoint(x, y, selfEl).cands;
+
+    const contrastSeen = new Set();
+    texts.forEach(t => {
+      if (t.el.tagName && t.el.tagName.toLowerCase() === 'tspan') return;
+      const style = window.getComputedStyle(t.el);
+      if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity || '1') === 0) return;
+      const fgParsed = parseColorStr(style.fill);
+      if (!fgParsed || fgParsed.a === 0) return;
+      const fg = blendOnWhite(fgParsed);
+
+      const cx = (t.rect.left + t.rect.right) / 2;
+      const cy = (t.rect.top + t.rect.bottom) / 2;
+      const { cands: bgCandidates, bgEl } = getBgInfoAtPoint(cx, cy, t.el);
+
+      const textRole = getSemRole(t.el, /^sem-(\w+)-text$/);
+      const bgRole = bgEl ? getSemRole(bgEl, /^sem-(\w+)(?:-(?:bg|fill))?$/) : null;
+      if (textRole && bgRole && textRole !== bgRole) {
+        const key = `mismatch_${t.text.slice(0, 20)}_${textRole}_${bgRole}`;
+        if (!contrastSeen.has(key)) {
+          contrastSeen.add(key);
+          issues.push({
+            type: 'CHROMATIC_TEXT_BG_MISMATCH',
+            message: `Chromatic mismatch: sem-${textRole}-text on sem-${bgRole} background for text "${t.text.slice(0, 25)}"`
+          });
+        }
+      }
+
+      const fs = parseFloat(style.fontSize || '12');
+      const fw = parseInt(style.fontWeight || '400', 10) || (style.fontWeight === 'bold' ? 700 : 400);
+      const isLarge = fs >= 18.66 || (fs >= 14 && fw >= 700);
+      const minRatio = isLarge ? 3.0 : 4.5;
+      const worstRatio = Math.min(...bgCandidates.map(bg => contrastRatio(fg, bg)));
+      if (worstRatio < minRatio) {
+        const key = `${t.text.slice(0, 20)}_${worstRatio.toFixed(1)}`;
+        if (!contrastSeen.has(key)) {
+          contrastSeen.add(key);
+          issues.push({
+            type: 'LOW_TEXT_CONTRAST',
+            message: `Low contrast (${worstRatio.toFixed(2)}:1 < ${minRatio}:1) for text "${t.text.slice(0, 25)}"`
+          });
+        }
+      }
+    });
+
+    // 8. WCAG 2.1 Non-Text Graphic Contrast Check (>= 3.0:1 für Pfeilspitzen, Linien & kleine Signalformen)
+    const graphicSeen = new Set();
+    const toScreenPt = (el, x, y) => {
+      const ctm = el.getScreenCTM();
+      if (!ctm) return { x, y };
+      return { x: ctm.a * x + ctm.c * y + ctm.e, y: ctm.b * x + ctm.d * y + ctm.f };
+    };
+    const reportGraphicContrast = (label, ratio) => {
+      if (ratio >= 3.0) return;
+      const key = `${label}_${ratio.toFixed(1)}`;
+      if (!graphicSeen.has(key)) {
+        graphicSeen.add(key);
+        issues.push({
+          type: 'LOW_GRAPHIC_CONTRAST',
+          message: `Low graphic contrast (${ratio.toFixed(2)}:1 < 3.0:1) for ${label}`
+        });
+      }
+    };
+
+    svg.querySelectorAll('line, path, polyline').forEach(el => {
+      if (el.closest('defs, marker')) return;
+      const st = window.getComputedStyle(el);
+      if (st.display === 'none' || st.visibility === 'hidden' || parseFloat(st.opacity || '1') === 0) return;
+
+      // A. Pfeilspitzen (<marker>) an Linienenden prüfen
+      const markerEnd = st.markerEnd || el.getAttribute('marker-end');
+      if (markerEnd && markerEnd !== 'none') {
+        const mm = markerEnd.match(/url\(\s*["']?#([^"')]+)["']?\s*\)/i);
+        const markerEl = mm ? document.getElementById(mm[1]) : null;
+        const shape = markerEl ? markerEl.querySelector('path, polygon, circle, rect') : null;
+        if (shape) {
+          const mSt = window.getComputedStyle(shape);
+          const mFgCands = resolveBgCandidates(mSt.fill);
+          if (mFgCands) {
+            let pt = null;
+            const tag = el.tagName.toLowerCase();
+            if (tag === 'line') {
+              const x1 = parseFloat(el.getAttribute('x1') || '0'), y1 = parseFloat(el.getAttribute('y1') || '0');
+              const x2 = parseFloat(el.getAttribute('x2') || '0'), y2 = parseFloat(el.getAttribute('y2') || '0');
+              const len = Math.hypot(x2 - x1, y2 - y1);
+              const back = len > 6 ? 6 / len : 0;
+              pt = toScreenPt(el, x2 - (x2 - x1) * back, y2 - (y2 - y1) * back);
+            } else if (typeof el.getTotalLength === 'function' && el.getTotalLength() > 0) {
+              const p = el.getPointAtLength(Math.max(0, el.getTotalLength() - 6));
+              pt = toScreenPt(el, p.x, p.y);
+            }
+            if (pt) {
+              const bgCands = getBgCandidatesAtPoint(pt.x, pt.y, el);
+              const worst = Math.min(...mFgCands.flatMap(fg => bgCands.map(bg => contrastRatio(fg, bg))));
+              reportGraphicContrast(`arrowhead (#${mm[1]})`, worst);
+            }
+          }
+        }
+      }
+
+      // B. Wichtige nicht-gestrichelte Vordergrund-Linien (>= 1.8px) ohne sem-card/sem-muted Rahmenklassen
+      const cls = el.getAttribute('class') || '';
+      const isSubtle = /\bsem-(?:card|muted)-stroke\b/.test(cls) || (st.strokeDasharray && st.strokeDasharray !== 'none') || (st.fill && st.fill !== 'none' && st.fill !== 'transparent');
+      const sw = parseFloat(st.strokeWidth || '1');
+      if (!isSubtle && sw >= 1.8) {
+        const sFg = parseColorStr(st.stroke);
+        if (sFg && sFg.a > 0) {
+          let midPt = null;
+          const tag = el.tagName.toLowerCase();
+          if (tag === 'line') {
+            const x1 = parseFloat(el.getAttribute('x1') || '0'), y1 = parseFloat(el.getAttribute('y1') || '0');
+            const x2 = parseFloat(el.getAttribute('x2') || '0'), y2 = parseFloat(el.getAttribute('y2') || '0');
+            midPt = toScreenPt(el, (x1 + x2) / 2, (y1 + y2) / 2);
+          } else if (typeof el.getTotalLength === 'function' && el.getTotalLength() > 0) {
+            const p = el.getPointAtLength(el.getTotalLength() / 2);
+            midPt = toScreenPt(el, p.x, p.y);
+          }
+          if (midPt) {
+            const bgCands = getBgCandidatesAtPoint(midPt.x, midPt.y, el);
+            const worst = Math.min(...bgCands.map(bg => contrastRatio(blendOnWhite(sFg), bg)));
+            reportGraphicContrast(`${tag} stroke`, worst);
+          }
+        }
+      }
+    });
+
+    // C. Kleine kompakte Signal-Formen (z. B. Punkte, kleine Marker) mit Solid-Fill (ohne gestrichelte Boxen / Linien-Endpunkte)
+    svg.querySelectorAll('circle, rect, polygon').forEach(el => {
+      if (el.closest('defs, marker')) return;
+      const cls = el.getAttribute('class') || '';
+      if (/\bsem-(?:card|muted)\b/.test(cls) && !/\bsem-\w+-fill\b/.test(cls)) return;
+      const st = window.getComputedStyle(el);
+      if (st.display === 'none' || st.visibility === 'hidden' || parseFloat(st.opacity || '1') < 0.95 || parseFloat(st.fillOpacity || '1') < 0.7) return;
+      if (st.strokeDasharray && st.strokeDasharray !== 'none') return;
+      const r = el.getBoundingClientRect();
+      if (r.width <= 14 || r.height <= 14 || r.width > 40 || r.height > 40) return;
+      const fgCands = resolveBgCandidates(st.fill);
+      const stCol = (parseFloat(st.strokeWidth || '0') >= 0.8) ? parseColorStr(st.stroke) : null;
+      if (!fgCands && (!stCol || stCol.a === 0)) return;
+      const bgCands = getBgCandidatesAtPoint((r.left + r.right) / 2, (r.top + r.bottom) / 2, el);
+      const fillWorst = fgCands ? Math.min(...fgCands.flatMap(fg => bgCands.map(bg => contrastRatio(fg, bg)))) : 0;
+      const strokeWorst = (stCol && stCol.a > 0) ? Math.min(...bgCands.map(bg => contrastRatio(blendOnWhite(stCol), bg))) : 0;
+      reportGraphicContrast(`${el.tagName.toLowerCase()} marker`, Math.max(fillWorst, strokeWorst));
+    });
+
+    if (checkEmbeddedTitleInDom) {
+      const directTitles = Array.from(svg.children).filter(el => {
+        if (!el.tagName || el.tagName.toLowerCase() !== 'text') return false;
+        const cls = el.getAttribute('class') || '';
+        const y = parseFloat(el.getAttribute('y') || '999');
+        return (/(?:^|\s)title(?:\s|$)/.test(cls) && y <= 65) || (isMini && /(?:^|\s)hdr(?:\s|$)/.test(cls) && y <= 35);
+      });
+      if (directTitles.length === 1) {
+        issues.push({
+          type: 'EMBEDDED_SLIDE_TITLE',
+          message: 'Eingebetteter Folientitel/-untertitel im SVG gefunden. Titel und Untertitel gehören ins Markdown, nicht ins SVG.'
+        });
+      }
+    }
+
     return {
       hasSvg: true,
       svgWidth: Math.round(svgWidth),
@@ -609,6 +1092,9 @@ async function auditSvgFile(browser, svgPath, options = {}) {
       textNodeCount: textNodes.length,
       issues
     };
+  }, {
+    checkEmbeddedTitleInDom: /[\\/]Diagramme[\\/]/i.test(svgPath) && !svgPath.endsWith('.tikz.svg'),
+    isMini: path.basename(svgPath).startsWith('Mini_')
   });
 
   let rasterPath = null;
@@ -621,6 +1107,11 @@ async function auditSvgFile(browser, svgPath, options = {}) {
   }
 
   await page.close();
+
+  const paletteIssues = checkSemanticPalette(svgPath);
+  if (paletteIssues.length > 0 && Array.isArray(analysis.issues)) {
+    analysis.issues.push(...paletteIssues);
+  }
 
   return {
     path: svgPath,

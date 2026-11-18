@@ -6,7 +6,8 @@
 ---
 
 ## 1. Artefakte, Vorgreif-Sperre & Kapitel-Schnittstellen
-- **Foliensatz:** [`Folien/Folien.md`](./Folien/Folien.md)
+- **Foliensätze:** [`Folien/Folien.md`](./Folien/Folien.md) (+ [`Folien_Anhang_A_Vektorgrafik_Details.md`](./Folien/Folien_Anhang_A_Vektorgrafik_Details.md))
+- **Abgrenzung Hauptdeck vs. Anhang (optional fürs Selbststudium):** *Hauptdeck (`Folien.md`):* WPF `Canvas`, Welt-Screen-Mapping (isotropes $s = \min(s_x, s_y)$, $Y$-Invertierung), Pfeilspitzen-Vektorgeometrie, DIN 406, `MatrixTransform` (`ScaleAt`, `Translate`, Freeze-Doktrin), `ScreenToWorld` und `DrawingVisual` + `.Freeze()`. *Anhang A (`Folien_Anhang_A_Vektorgrafik_Details.md`):* WPF-Layout-Panels (`Grid`/`StackPanel`), `Attached Properties`-Interna, Shape-Positionierung, Beweis zu `ScaleAt` & Zentrierungsfällen sowie 2-Phasen-Layout-Cycle (`Measure`/`Arrange`) und `VisualHost`.
 - **Übungsblatt & Vorlage:** [`Aufgabenblatt.md`](./Uebung/Aufgabenblatt.md) | **Moodle-Text:** [`Text.md`](./Moodle/Text.md) | [`VectorTrussCanvas.sln`](./Uebung/Vorlage/VectorTrussCanvas.sln)
 - **Assessment zu Terminbeginn:** **Moodle-Test 1** ([`Quiz/README.md`](./Quiz/README.md), 15 Min., prüft ausschließlich Kap. 00–02).
 - **Vorgreif-Sperre (Technologie-Stand T03):** Rein geometrisch auf WPF `Canvas` / `DrawingVisual`. *Strikte Tabus:* **Keine Fachwerk-Statik, keine Steifigkeitsmatrix $\mathbf{K}$, kein Math.NET Cholesky (erst in T07!)** – alle Kräfte sind fest vorgegebene Vektoren.
@@ -21,10 +22,10 @@
 
 ## 3. Zweistufige Hausübung (`Einheit 03`) & Showcase-Fokus
 - **Stufe 1 – Basisaufgabe (`1.1`–`1.4`):**
-  - `1.1`: Euklidische Stablängenberechnung $L = \sqrt{\Delta x^2 + \Delta y^2}$ in Weltkoordinaten ergänzen.
-  - `1.2`: Vertikale DIN-406-Gesamthöhenbemaßung mit im Screen Space gedrehten Maßpfeilen implementieren.
-  - `1.3`: Bounding-Box-Jittering beim interaktiven Knoten-Dragging durch Einfrieren der Referenz-BoundingBox während `MouseMove` beheben.
-  - `1.4`: Hin- und Rücktransformation (`WorldToScreen` $\leftrightarrow$ `ScreenToWorld`) und Pfeilgeometrie mit `dotnet test` verifizieren.
+  - `1.1`: Code-Walkthrough & Seitenverhältnis-Test der isotropen Viewport-Transformation (`Transform2D`: `WorldToScreen` $\leftrightarrow$ `ScreenToWorld`) anhand der Golden Reference Numbers.
+  - `1.2`: Euklidische Stablängenberechnung $L = \sqrt{\Delta x^2 + \Delta y^2}$ (`TrussGeometry.GetBarLength`) in Weltkoordinaten und Mittelpunkts-Beschriftung auf dem Canvas ergänzen.
+  - `1.3`: Vertikale DIN-406-Gesamthöhenbemaßung (`VectorArrow.AddVerticalDimensionLine`) mit im Screen Space orientierten Maßpfeilen implementieren.
+  - `1.4`: Bounding-Box-Jittering beim interaktiven Knoten-Dragging durch Einfrieren von `_transform.Update(...)` während `MouseMove` beheben, Millimeter-Auflösung (`:F3`) aktivieren und alle Unit-Tests in `VectorTrussCanvas.Tests` mit `dotnet test` verifizieren.
 - **Stufe 2 – Wahlmodell (10 Pkt. – *Vorgreif-Sperre: Keine FEM-Statik vor T07!*):**
   - **Track A (`A.1`–`A.4` – 2D-CAD Tragwerks-Inspektor):** Zweistufige DIN-406-Bemaßungsketten (Einzelfelder + Gesamtspannweite), interaktives Ziehen/Drehen von Kraftpfeilspitzen $(F_x, F_y)$, Mausrad-Zoom/Pan und JSON-Import/Export.
   - **Track B (`B.1`–`B.4` – Poly Bridge Blueprint-Baumeister):** Interaktives Brückenbau-Zeichenbrett über einer Schlucht mit $0{,}5\,\text{m}$-Grid-Snapping, gestrichelter Stab-Vorschau ($L_{\max} = 4{,}0\,\text{m}$), Knoten-/Stab-Löschung (`Entf`), Live-Baubudget ($1\,000\,\text{EUR/m}$) und JSON-Level-Export.

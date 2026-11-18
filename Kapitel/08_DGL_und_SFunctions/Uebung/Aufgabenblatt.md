@@ -1,19 +1,22 @@
-# Aufgabenblatt Termin 08: Dynamische Modelle Kontinuierlich, S-Function-Architektur & RK4-Solver
-## Lehrveranstaltung: Systemsimulation / Digitaler Zwilling
-### FH Oberösterreich – Campus Wels | Studiengang Automatisierungstechnik
+# Aufgabenblatt 08: Dynamische Modelle Kontinuierlich, S-Function-Architektur & RK4-Solver
 
----
+**Lehrveranstaltung:** Systemsimulation / Digitaler Zwilling  
+**Studiengang:** B.Sc. Automatisierungstechnik, 5. Semester  
+**Institution:** Fachhochschule Oberösterreich – Campus Wels  
+**Bearbeitungsform:** Zweistufige Hausübung im 2er-Team (1 Woche)
 
-| Metadaten | Details |
-| :--- | :--- |
-| **Lehrveranstaltungseinheit:** | Termin 08 (begleitend zu Kapitel 08: Dynamische Modelle Kontinuierlich) |
-| **Themenschwerpunkt:** | Kontinuierliche DGL-Systeme, S-Function-Architektur, Runge-Kutta 4 (RK4) & PID Anti-Windup Clamping |
-| **Technologie-Stack:** | C# 12 / .NET 8/10, S-Function-Klassenstruktur, ScottPlot 5 / WPF |
-| **Vorgreif-Sperre:** | **Erlaubt:** RK4-Integrator, S-Functions (`Derivatives`, `Outputs`), PID-Clamping, ScottPlot 5.<br>**Strengstens verboten:** *KEINE* Diskrete Ereignissimulation (DES, `PriorityQueue`), *KEINE* Zero-Crossing Wurzelsuche! |
-| **Bearbeitungsform & Zeitbudget:** | **Zweistufige Hausübung im festen 2er-Team (1 Woche):**<br>• **Stufe 1 (Basisaufgabe):** Gemeinsames Fundament auf der C#-Vorlage (Richtwert ca. 60 Min. zu Hause)<br>• **Stufe 2 (Vertiefungsaufgabe / Track-Ausbau):** Wahlmodell Track A (Industrie) **ODER** Track B (Simulation Game) (Richtwert ca. 3–4 h zu Hause) |
-| **Abgabeform:** | Git-Repository: Sourcecode, Unit-Tests und Markdown-Bericht (`README.md`) |
+| Stufe | Richtwert | Thema / Inhalt |
+| :--- | :--- | :--- |
+| **Stufe 1 (Basisaufgabe)** | ca. 60 Min. | Euler-Stabilitätsgrenze, `PidController`-Extraktion & Anti-Windup auf `SFunctionSimulation.sln` |
+| **Stufe 2 – Track A (Industrie)** | ca. 3–4 h *(Wahl)* | Verfahrensvergleich (Euler/Heun/RK4) & Elektro-Thermisches Servomotormodell |
+| **Stufe 2 – Track B (Simulation Game)** | ca. 3–4 h *(Wahl)* | SpaceX Falcon Hop & Booster Landing |
 
----
+> [!IMPORTANT]
+> **Technische Rahmenbedingungen**
+> - **Plattform & Projekt:** C# 12 / .NET 8 oder .NET 10, bereitgestellte WPF-Projektmappe (ohne zusätzliche NuGet-Pakete)
+> - **Zugelassene APIs:** RK4-Integrator, S-Functions (`Derivatives`, `Outputs`), PID-Clamping, `ScottPlot 5`
+> - **Abgrenzung:** Kontinuierliche Zeitintegration ohne zusätzliche NuGet-Pakete
+
 
 ## 1. Lernziele (Intended Learning Outcomes - ILOs)
 
@@ -23,9 +26,8 @@ Nach erfolgreicher Bearbeitung dieser Übungseinheit sind Sie in der Lage:
 3. **Aktorsättigung & Anti-Windup Clamping beherrschen:** Das gefürchtete Integral-Windup bei physikalisch begrenzten Stellgrößen durch Conditional Integration (Clamping-Kriterium $e \cdot u_{\text{raw}} > 0$) mathematisch sauber zu eliminieren.
 4. **Regelkreisdynamik analysieren:** Das Einschwingverhalten geregelter mechatronischer Systeme unter massiven Laststörungen quantitativ zu vermessen und die numerische Stabilität gegenüber Euler-Verfahren nachzuweisen.
 
----
 
-## 2. Mathematisch-Theoretische Grundlagen
+## 2. Mathematische Grundlagen
 
 ### 2.1 S-Function Block-Architektur
 
@@ -81,7 +83,6 @@ Läuft das Stellglied in die Sättigung ($u_{\text{raw}} \neq u$), wächst der I
 
 $$\frac{\mathrm{d}x_{\text{i}}}{\mathrm{d}t} = \begin{cases} 0 & \text{wenn gesättigt UND } e \cdot u_{\text{raw}} > 0 \\ e(t) & \text{sonst} \end{cases}$$
 
----
 
 ## 3. Stufe 1: Basisaufgabe (Gemeinsames Fundament auf der C#-Vorlage, Richtwert ca. 60 Min.)
 
@@ -110,7 +111,9 @@ $$\frac{\mathrm{d}x_{\text{i}}}{\mathrm{d}t} = \begin{cases} 0 & \text{wenn ges�
   $$\omega_{\infty} = \frac{k_{\text{m}} \cdot u_{\text{A}}}{R_{\text{A}} \cdot d + k_{\text{m}} \cdot k_{\text{e}}} = \frac{2{,}4}{0{,}012} = 200{,}0\,\text{rad/s}$$
   *(Hinweis: Aufgrund von $T_{\text{m}} \approx 0{,}833\,\text{s}$ beträgt die Drehzahl bei $t = 0{,}5\,\text{s}$ erst $\approx 88{,}3\,\text{rad/s}$; der stationäre Endwert $\omega \approx 199{,}99\,\text{rad/s}$ wird nach ca. $10\,T_{\text{m}}$, also bei **$t = 8{,}0\,\text{s}$**, erreicht – siehe Unit-Test `TestIdleSpeedSteadyStateConvergence` in `SFunctionTests.cs`!)*
 
-#### Aufgabenstellung (Schritt für Schritt auf Basis von `Vorlage/SFunctionSimulation.sln`):
+### Aufgabenstellung (auf Basis von `Vorlage/SFunctionSimulation.sln`):
+**Vorbereitung – Starter-Kit untersuchen (`Vorlage/SFunctionSimulation.sln`):**
+- Öffnen Sie die Solution `Vorlage/SFunctionSimulation.sln` und untersuchen Sie das S-Function-Interface (`Core/ISFunction.cs`), den klassischen RK4-Integrator (`Solvers/RungeKutta4Solver.cs`), das 4-Zustands-Servomotormodell (`Models/DCMotorWithAntiWindup.cs`) sowie die `ScottPlot`-Visualisierung in `MainWindow.xaml.cs`.
 
 1. **Aufgabe 1.1 – Expliziter Euler (`EulerExplicitSolver.Step`) & Stabilitätsgrenze testen:**
    - Erstellen Sie im Ordner `Solvers/` (oder in `RungeKutta4Solver.cs`) eine statische Methode `EulerExplicitSolver.Step(ISFunction system, double t, double[] x, double[] u, double h)`:
@@ -122,9 +125,8 @@ $$\frac{\mathrm{d}x_{\text{i}}}{\mathrm{d}t} = \begin{cases} 0 & \text{wenn ges�
 3. **Aufgabe 1.3 – Direktvergleich MIT vs. OHNE Anti-Windup im selben Diagramm:**
    - Erweitern Sie `RunSimulation()` in `MainWindow.xaml.cs` so, dass bei jedem Klick auf „Simulation starten“ **beide** Konfigurationen (`AntiWindupEnabled = true` und `AntiWindupEnabled = false`) berechnet und im oberen Plot (`PlotPosition`) direkt übereinander gezeichnet werden (Blau durchgezogen = mit Clamping, Rot gestrichelt = ohne Anti-Windup).
 
----
 
-## 4. Stufe 2: Vertiefungsaufgabe / Track-Ausbau (Wahlmodell – GENAU EINE Aufgabe!)
+## 4. Stufe 2: Vertiefungsaufgabe / Track-Ausbau (Wahlmodell: Track A ODER Track B)
 
 > [!IMPORTANT]
 > **Pick your Track (Wahlmodell – KEINE Doppelbelastung!):**  
@@ -134,7 +136,6 @@ $$\frac{\mathrm{d}x_{\text{i}}}{\mathrm{d}t} = \begin{cases} 0 & \text{wenn ges�
 > 
 > Beide Aufgaben basieren auf der S-Function-Architektur, Mehrstufen-Integratoren und Anti-Windup Clamping. Bearbeiten Sie **NUR EINEN** Track!
 
----
 
 ### Track A (Industrie): Verfahrensvergleich (Euler/Heun/RK4) & Elektro-Thermisches Servomotormodell
 
@@ -170,7 +171,6 @@ Da der 4-Zustands-Basisregelkreis bereits im Starter-Kit enthalten ist, erweiter
    - Überschreitet die Wicklungstemperatur den Schwellenwert $T_{\text{warn}} = 80\,^\circ\text{C}$, reduziert das Steuergerät automatisch die maximal zulässige Stellspannung linear ($u_{\max}(T_{\text{Cu}})$ sinkt von $24\,\text{V}$ auf $12\,\text{V}$ bei $T_{\text{crit}} = 120\,^\circ\text{C}$), wobei das Anti-Windup Clamping sofort auf die reduzierte Sättigungsgrenze reagiert!
    - Visualisieren Sie im ScottPlot-Dashboard Drehwinkel $\theta(t)$, Stellspannung $u_{\text{A}}(t)$, Ankerstrom $i_{\text{A}}(t)$ und Wicklungstemperatur $T_{\text{Cu}}(t)$ und diskutieren Sie die Ergebnisse im `README.md`-Bericht.
 
----
 
 ### Track B (Simulation Game): SpaceX Falcon Hop & Booster Landing
 
@@ -216,20 +216,19 @@ Die spektakulären Landungen der SpaceX Falcon 9 Erststufen erfordern eine hochp
    - Bei $t = 3{,}0\,\text{s}$ trifft eine seitliche Windböe ($F_{\text{wind}} = 12\,\text{kN}$) für $0{,}5\,\text{s}$ auf den Booster.
    - Simulieren Sie MIT vs. OHNE Anti-Windup und zeigen Sie im ScottPlot-Diagramm, dass der Booster mit Anti-Windup stabil aufsetzt ($|v_y| \le 1\,\text{m/s}, |\theta| \le 2^\circ$), während er ohne Anti-Windup durch übersteuernden Gimbal umkippt.
 
----
 
-## 5. Akzeptanzkriterien & Definition of Done
+## 5. Akzeptanzkriterien & Bewertungsrubrik (10 Punkte)
 
 Für die volle Punktzahl (10 Punkte) müssen folgende Kriterien erfüllt sein:
 
 | Kriterium | Punkte | Beschreibung |
 | :--- | :---: | :--- |
-| **S-Function & Mehrstufen-Solver** | **3 P.** | Mathematisch korrekte Kapselung der DGLn in `ISFunction`; saubere Implementierung von Euler (RK1), Heun (RK2) und RK4 ohne Seiteneffekte. |
-| **PID-Kapselung & Anti-Windup Clamping** | **3 P.** | Vollständige Implementierung von Conditional Integration ($e \cdot u_{\text{raw}} > 0$) in einer eigenständigen `PidController`-Klasse. |
-| **Erweiterte Domänenmodellierung & Plots** | **2 P.** | **Track A:** Elektro-thermisches 5-Zustands-Modell ($T_{\text{Cu}}$) mit Derating & Solver-Vergleich.<br>**Track B:** Nichtlineare 6-DOF-Booster-Landung bei Windböe MIT vs. OHNE Anti-Windup in ScottPlot 5. |
-| **Numerische Validierung & Bericht** | **2 P.** | Abgleich gegen den analytischen Grenzfall ($\omega_{\infty} = 200\,\text{rad/s}$ für $t \to 8\,\text{s}$) sowie Schrittweiten-/Stabilitätsdiskussion in `README.md`. |
+| **S-Function & Mehrstufen-Solver** | 3 P. | Mathematisch korrekte Kapselung der DGLn in `ISFunction`; saubere Implementierung von Euler (RK1), Heun (RK2) und RK4 ohne Seiteneffekte. |
+| **PID-Kapselung & Anti-Windup Clamping** | 3 P. | Vollständige Implementierung von Conditional Integration ($e \cdot u_{\text{raw}} > 0$) in einer eigenständigen `PidController`-Klasse. |
+| **Erweiterte Domänenmodellierung & Plots** | 2 P. | **Track A:** Elektro-thermisches 5-Zustands-Modell ($T_{\text{Cu}}$) mit Derating & Solver-Vergleich.<br>**Track B:** Nichtlineare 6-DOF-Booster-Landung bei Windböe MIT vs. OHNE Anti-Windup in ScottPlot 5. |
+| **Numerische Validierung & Bericht** | 2 P. | Abgleich gegen den analytischen Grenzfall ($\omega_{\infty} = 200\,\text{rad/s}$ für $t \to 8\,\text{s}$) sowie Schrittweiten-/Stabilitätsdiskussion in `README.md`. |
+| **Gesamt** | **10 P.** | **100 % der Übungseinheit** |
 
----
 
 ## 6. Online-Recherche-Box
 
@@ -245,7 +244,6 @@ Nutzen Sie zur Vorbereitung und Vertiefung folgende Quellen:
   - `DC servo motor transfer function state space differential equations`
   - `thrust vector control booster rocket dynamics simulation`
 
----
 
 ## 7. Vibe-Coding Prompting-Tipps
 
@@ -259,7 +257,6 @@ Falls Sie KI-Assistenten verwenden, beachten Sie folgende Vorgaben zur Vermeidun
 > **Prompt-Vorlage 2: Exakte Anti-Windup Clamping-Bedingung**  
 > *„Implementiere die Update-Methode eines diskretisierten PID-Reglers mit Clamping in C#. Achtung: Der I-Zustand darf NUR DANN eingefroren werden, wenn die Stellgröße saturiert ist UND der Regelfehler $e$ das gleiche Vorzeichen wie die Rohstellgröße $u_{\text{raw}}$ hat ($e \cdot u_{\text{raw}} > 0$). Wenn der Fehler das System aus der Sättigung herausführen möchte, MUSS der I-Anteil normal integriert werden!“*
 
----
 
 ## 8. 🔍 Leitfragen für den Live-Showcase & Code-Defense (Säule 2b)
 

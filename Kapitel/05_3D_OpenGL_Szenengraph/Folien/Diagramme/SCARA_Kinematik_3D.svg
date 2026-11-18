@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-45 0 570 380" width="570" height="380">
+  <defs>
+    <!-- @svg-palette-defs:start -->
+    <linearGradient id="grad-sem-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#eff6ff" />
+      <stop offset="100%" stop-color="#dbeafe" />
+    </linearGradient>
+    <linearGradient id="grad-sem-primary-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="grad-sem-success" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0fdf4" />
+      <stop offset="100%" stop-color="#dcfce7" />
+    </linearGradient>
+    <linearGradient id="grad-sem-success-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#15803d" />
+      <stop offset="100%" stop-color="#166534" />
+    </linearGradient>
+    <linearGradient id="grad-sem-warning" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="100%" stop-color="#fef3c7" />
+    </linearGradient>
+    <linearGradient id="grad-sem-warning-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309" />
+      <stop offset="100%" stop-color="#92400e" />
+    </linearGradient>
+    <linearGradient id="grad-sem-danger" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef2f2" />
+      <stop offset="100%" stop-color="#fee2e2" />
+    </linearGradient>
+    <linearGradient id="grad-sem-danger-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#dc2626" />
+      <stop offset="100%" stop-color="#b91c1c" />
+    </linearGradient>
+    <linearGradient id="grad-sem-muted" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+    <linearGradient id="grad-sem-muted-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#475569" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+    <linearGradient id="grad-sem-neutral" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+    <linearGradient id="grad-sem-neutral-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <!-- @svg-palette-defs:end -->
+    <style>
+      
+/* @svg-palette:start */
+      .sem-primary { fill: url(#grad-sem-primary); stroke: #2563eb; }
+      .sem-primary-bg { fill: url(#grad-sem-primary); stroke: none; }
+      .sem-primary-stroke { stroke: #2563eb; }
+      .sem-primary-fill { fill: url(#grad-sem-primary-fill); }
+      .sem-primary-text { fill: #1e40af; }
+      .sem-success { fill: url(#grad-sem-success); stroke: #15803d; }
+      .sem-success-bg { fill: url(#grad-sem-success); stroke: none; }
+      .sem-success-stroke { stroke: #15803d; }
+      .sem-success-fill { fill: url(#grad-sem-success-fill); }
+      .sem-success-text { fill: #166534; }
+      .sem-warning { fill: url(#grad-sem-warning); stroke: #b45309; }
+      .sem-warning-bg { fill: url(#grad-sem-warning); stroke: none; }
+      .sem-warning-stroke { stroke: #b45309; }
+      .sem-warning-fill { fill: url(#grad-sem-warning-fill); }
+      .sem-warning-text { fill: #92400e; }
+      .sem-danger { fill: url(#grad-sem-danger); stroke: #dc2626; }
+      .sem-danger-bg { fill: url(#grad-sem-danger); stroke: none; }
+      .sem-danger-stroke { stroke: #dc2626; }
+      .sem-danger-fill { fill: url(#grad-sem-danger-fill); }
+      .sem-danger-text { fill: #991b1b; }
+      .sem-muted { fill: url(#grad-sem-muted); stroke: #94a3b8; }
+      .sem-muted-bg { fill: url(#grad-sem-muted); stroke: none; }
+      .sem-muted-stroke { stroke: #94a3b8; }
+      .sem-muted-fill { fill: url(#grad-sem-muted-fill); }
+      .sem-muted-text { fill: #334155; }
+      .sem-neutral { fill: url(#grad-sem-neutral); stroke: #334155; }
+      .sem-neutral-bg { fill: url(#grad-sem-neutral); stroke: none; }
+      .sem-neutral-stroke { stroke: #334155; }
+      .sem-neutral-fill { fill: url(#grad-sem-neutral-fill); }
+      .sem-neutral-text { fill: #0f172a; }
+      /* @svg-palette:end */
+.hdr { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15.5px; font-weight: bold; text-anchor: middle; }
+      .sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: 600; text-anchor: middle; }
+      .code { font-family: 'Consolas', monospace; font-size: 13px; font-weight: bold; text-anchor: middle; }
+    </style>
+    <marker id="arr-slate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path class="sem-muted-fill" d="M 0 1.5 L 8.5 5 L 0 8.5 z" />
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path class="sem-primary-fill" d="M 0 1.5 L 8.5 5 L 0 8.5 z" />
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path class="sem-success-fill" d="M 0 1.5 L 8.5 5 L 0 8.5 z" />
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path class="sem-warning-fill" d="M 0 1.5 L 8.5 5 L 0 8.5 z" />
+    </marker>
+  </defs>
+
+  <text x="240" y="33" class="hdr sem-primary-text">Kinematische Kette: Lokale Versätze (T) &amp; Drehungen (R_y)</text>
+
+  <!-- Bodenplatte am Fußpunkt & Ablageziel unter dem TCP -->
+  <ellipse class="sem-muted" cx="112" cy="236" rx="32" ry="9" stroke-width="1.8" />
+  <ellipse class="sem-warning" cx="398" cy="234" rx="24" ry="7" stroke-width="1.6" stroke-dasharray="4,3" />
+
+  <!-- +Y Drehachse oberhalb der Schulter -->
+  <line class="sem-success-stroke" x1="112" y1="100" x2="112" y2="60" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arr-green)" />
+  <text x="112" y="50" class="code sem-success-text">+Y</text>
+
+  <!-- 1. Standsäule _baseNode + Versatz T_y(HBase) -->
+  <line class="sem-muted-stroke" x1="112" y1="236" x2="112" y2="138" stroke-width="16" stroke-linecap="round" />
+  <circle class="sem-neutral-fill" cx="112" cy="236" r="8.5" />
+  <line class="sem-muted-stroke" x1="84" y1="230" x2="84" y2="146" stroke-width="2.2" marker-end="url(#arr-slate)" />
+  <text x="24" y="186" class="code sem-neutral-text">T_y(HBase)</text>
+  <text x="24" y="205" class="sub sem-muted-text">0.50 m</text>
+  <text x="112" y="268" class="code sem-neutral-text">_baseNode</text>
+
+  <!-- 2. Schulter _arm1Node: Drehung R_y(theta_1) + Versatz T_x(L1) -->
+  <line class="sem-primary-stroke" x1="112" y1="138" x2="268" y2="118" stroke-width="14" stroke-linecap="round" />
+  <circle class="sem-primary-fill" cx="112" cy="138" r="12.5" stroke="#ffffff" stroke-width="2" />
+  <path class="sem-primary-stroke" d="M 88 114 A 24 9 0 1 0 136 114" fill="none" stroke-width="2.3" marker-end="url(#arr-blue)" />
+  <text x="24" y="114" class="code sem-primary-text">R_y(theta_1)</text>
+  <line class="sem-primary-stroke" x1="142" y1="112" x2="234" y2="100" stroke-width="2.2" marker-end="url(#arr-blue)" />
+  <text x="188" y="88" class="code sem-primary-text">T_x(L1)</text>
+  <text x="190" y="158" class="code sem-primary-text">_arm1Node</text>
+
+  <!-- 3. Ellenbogen _arm2Node: Drehung R_y(theta_2) + Versatz T_x(L2) -->
+  <line class="sem-success-stroke" x1="268" y1="118" x2="398" y2="154" stroke-width="11.5" stroke-linecap="round" />
+  <circle class="sem-success-fill" cx="268" cy="118" r="11" stroke="#ffffff" stroke-width="2" />
+  <path class="sem-success-stroke" d="M 246 94 A 22 8 0 1 0 290 94" fill="none" stroke-width="2.3" marker-end="url(#arr-green)" />
+  <text x="268" y="72" class="code sem-success-text">R_y(theta_2)</text>
+  <line class="sem-success-stroke" x1="300" y1="108" x2="388" y2="132" stroke-width="2.2" marker-end="url(#arr-green)" />
+  <text x="358" y="98" class="code sem-success-text">T_x(L2)</text>
+  <text x="320" y="170" class="code sem-success-text">_arm2Node</text>
+
+  <!-- 4. Vertikale Pinole _pinoleNode: Hub T_y(-d_3) zum TCP -->
+  <line class="sem-danger-stroke" x1="398" y1="154" x2="398" y2="224" stroke-width="7" stroke-linecap="round" />
+  <circle class="sem-muted-fill" cx="398" cy="154" r="8.5" stroke="#ffffff" stroke-width="1.8" />
+  <line class="sem-warning-stroke" x1="418" y1="158" x2="418" y2="216" stroke-width="2.2" marker-end="url(#arr-amber)" />
+  <text x="465" y="190" class="code sem-warning-text">T_y(-d_3)</text>
+  <text x="324" y="212" class="code sem-danger-text">_pinoleNode</text>
+
+  <!-- Gelbe TCP-Kugel -->
+  <circle class="sem-warning-stroke sem-warning-fill" cx="398" cy="224" r="10" stroke-width="2.2" />
+  <text x="398" y="268" class="code sem-warning-text">TCP (M_TCP)</text>
+
+  <!-- Unten: Matrix-Verkettung -->
+  <rect class="sem-primary-stroke" x="-25" y="288" width="530" height="70" rx="8" fill="#ffffff" stroke-width="1.8" />
+  <text x="240" y="314" class="code sem-primary-text">M_TCP = T_y(HBase) · R_y(theta_1) · T_x(L1)</text>
+  <text x="240" y="341" class="code sem-success-text">        · R_y(theta_2) · T_x(L2) · T_y(-d_3)</text>
+</svg>

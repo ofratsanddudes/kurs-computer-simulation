@@ -1,19 +1,22 @@
-# Aufgabenblatt Termin 09: Dynamische Modelle Diskret, Diskrete Ereignissimulation (DES) & Warteschlangen
-## Lehrveranstaltung: Systemsimulation / Digitaler Zwilling
-### FH Oberösterreich – Campus Wels | Studiengang Automatisierungstechnik
+# Aufgabenblatt 09: Dynamische Modelle Diskret, Diskrete Ereignissimulation (DES) & Warteschlangen
 
----
+**Lehrveranstaltung:** Systemsimulation / Digitaler Zwilling  
+**Studiengang:** B.Sc. Automatisierungstechnik, 5. Semester  
+**Institution:** Fachhochschule Oberösterreich – Campus Wels  
+**Bearbeitungsform:** Zweistufige Hausübung im 2er-Team (1 Woche)
 
-| Metadaten | Details |
-| :--- | :--- |
-| **Lehrveranstaltungseinheit:** | Termin 09 (begleitend zu Kapitel 09: Dynamische Modelle Diskret) |
-| **Themenschwerpunkt:** | Diskrete Ereignissimulation (DES), Future Event List (FEL), Inversionsmethode, $M/M/c/K$-Systeme & Little's Gesetz |
-| **Technologie-Stack:** | C# 12 / .NET 8/10, `System.Collections.Generic.PriorityQueue<TElement, TPriority>`, TPL `Parallel.For`, ScottPlot 5 |
-| **Vorgreif-Sperre:** | **Erlaubt:** `PriorityQueue`, stochastische Zufallsgeneratoren, Inversionsmethode, TPL für Replikationen, ScottPlot 5.<br>**Strengstens verboten:** *KEINE* kontinuierlichen DGL-Schaltfunktionen (Zero-Crossing Wurzelsuche)! |
-| **Bearbeitungsform & Zeitbudget:** | **Zweistufige Hausübung im festen 2er-Team (1 Woche):**<br>• **Stufe 1 (Basisaufgabe):** Gemeinsames Fundament auf der C#-Vorlage (Richtwert ca. 60 Min. zu Hause)<br>• **Stufe 2 (Vertiefungsaufgabe / Track-Ausbau):** Wahlmodell Track A (Industrie) **ODER** Track B (Simulation Game) (Richtwert ca. 3–4 h zu Hause) |
-| **Abgabeform:** | Git-Repository: Sourcecode, Unit-Tests und Markdown-Bericht (`README.md`) |
+| Stufe | Richtwert | Thema / Inhalt |
+| :--- | :--- | :--- |
+| **Stufe 1 (Basisaufgabe)** | ca. 60 Min. | Blocking/Little's Gesetz (`QueueSystem.cs`), Log-Normal-Zeiten & `Parallel.For`-Replikationen auf `DiscreteEventSimulation.sln` |
+| **Stufe 2 – Track A (Industrie)** | ca. 3–4 h *(Wahl)* | Automobil-Lackierstraße mit M/M/c-Puffern & Little's Gesetz |
+| **Stufe 2 – Track B (Simulation Game)** | ca. 3–4 h *(Wahl)* | Theme Park Rush & Achterbahn-Warteschlangen |
 
----
+> [!IMPORTANT]
+> **Technische Rahmenbedingungen**
+> - **Plattform & Projekt:** C# 12 / .NET 8 oder .NET 10, bereitgestellte WPF-Projektmappe (ohne zusätzliche NuGet-Pakete)
+> - **Zugelassene APIs:** `System.Collections.Generic.PriorityQueue<TElement, TPriority>`, stochastische Zufallsgeneratoren (Inversionsmethode), TPL `Parallel.For`, `ScottPlot 5`
+> - **Abgrenzung:** Diskrete Ereignissimulation ohne zusätzliche NuGet-Pakete
+
 
 ## 1. Lernziele (Intended Learning Outcomes - ILOs)
 
@@ -24,9 +27,8 @@ Nach erfolgreicher Bearbeitung dieser Übungseinheit sind Sie in der Lage:
 4. **Little's Gesetz empirisch nachweisen:** Den fundamentalen stationären Erhaltungssatz der Warteschlangentheorie $\bar{L} = \lambda_{\text{eff}} \cdot \bar{W}$ über statistische Datenakkumulation zu verifizieren.
 5. **Monte-Carlo-Konfidenzintervalle berechnen:** Simulationsläufe über TPL `Parallel.For` zu replizieren und 95%-Konfidenzintervalle für Durchlauf- und Wartezeiten auszuweisen.
 
----
 
-## 2. Mathematisch-Theoretische Grundlagen
+## 2. Mathematische Grundlagen
 
 ### 2.1 Das Paradigma der Diskreten Ereignissimulation (DES)
 
@@ -71,7 +73,6 @@ $$\bar{L} = \lambda_{\text{eff}} \cdot \bar{W}, \quad \bar{L}_{\text{q}} = \lamb
 - $\lambda_{\text{eff}}$: Effektive Ankunftsrate. Bei begrenzter Kapazität $K$ gehen blockierte Einheiten verloren:
   $$\lambda_{\text{eff}} = \lambda \cdot (1 - P_{\text{Block}})$$
 
----
 
 ## 3. Stufe 1: Basisaufgabe (Gemeinsames Fundament auf der C#-Vorlage, Richtwert ca. 60 Min.)
 
@@ -91,7 +92,9 @@ In der bereitgestellten WPF-Starter-Vorlage (`Vorlage/DiscreteEventSimulation.sl
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Aufgabenstellung (Schritt für Schritt):
+### Aufgabenstellung (auf Basis von `Vorlage/DiscreteEventSimulation.sln`):
+**Vorbereitung – Starter-Kit untersuchen (`Vorlage/DiscreteEventSimulation.sln`):**
+- Öffnen Sie die Solution `Vorlage/DiscreteEventSimulation.sln` und untersuchen Sie die ereignisdiskrete Future Event List (`EventQueue`), die Exponentialverteilung (`ExponentialDistribution`), das Basis-Warteschlangenmodell (`Models/QueueSystem.cs`) sowie das `ScottPlot.WPF`-Dashboard in `MainWindow.xaml.cs`.
 
 1. **Aufgabe 1.1 – Wartepuffer-Kapazität $K$ vs. Systemkapazität & Little's Gesetz unter Blocking (`QueueSystem.cs`):**
    - Starten Sie die Vorlage zunächst mit den Standardwerten ($\lambda = 4{,}0/\text{min}$, $\mu = 5{,}0/\text{min}$, $c = 1$, $K = 0 \implies \infty$) und vergleichen Sie die gemessene mittlere Warteschlangenlänge $\bar{L}_q$ mit dem analytischen Erlang-Wert $L_q = \frac{\rho^2}{1 - \rho} = 3{,}20$.
@@ -116,9 +119,8 @@ In der bereitgestellten WPF-Starter-Vorlage (`Vorlage/DiscreteEventSimulation.sl
 - Bei $K = 10$ gilt $\bar{L} = \lambda_{\text{eff}} \cdot \bar{W}$ exakt ($< 0{,}5\,\%$ Fehler), während $\lambda \cdot \bar{W}$ um die Blockierwahrscheinlichkeit $P_{\text{Block}}$ abweicht.  
 - Bei $R = 100$ parallelen Läufen schrumpft das 95%-Konfidenzintervall für $\mathbb{E}[W]$ auf ca. $\pm 0{,}015\,\text{min}$ um den theoretischen Wert $W = 1{,}00\,\text{min}$.
 
----
 
-## 4. Stufe 2: Vertiefungsaufgabe / Track-Ausbau (Wahlmodell – GENAU EINE Aufgabe!)
+## 4. Stufe 2: Vertiefungsaufgabe / Track-Ausbau (Wahlmodell: Track A ODER Track B)
 
 > [!IMPORTANT]
 > **Pick your Track (Wahlmodell – KEINE Doppelbelastung!):**  
@@ -128,7 +130,6 @@ In der bereitgestellten WPF-Starter-Vorlage (`Vorlage/DiscreteEventSimulation.sl
 > 
 > Beide Aufgaben basieren auf der diskreten Ereignissimulation mit Mehrkanal-Servern ($M/M/c/K$), Prioritätswarteschlangen und statistischer Validierung über Little's Gesetz. Bearbeiten Sie **NUR EINEN** Track!
 
----
 
 ### Track A (Industrie): Automobil-Lackierstraße mit M/M/c-Puffern & Little's Gesetz
 
@@ -181,7 +182,6 @@ In der Automobilendmontage werden Rohkarosserien durch eine Lackierstraße gesch
      $$\text{CI}_{95\%} = \bar{W} \pm 1{,}96 \cdot \frac{s_W}{\sqrt{N_{\text{runs}}}}$$
    - Plotten Sie das Verteilungs-Histogramm der Verweilzeiten in ScottPlot 5.
 
----
 
 ### Track B (Simulation Game): Theme Park Rush & Achterbahn-Warteschlangen
 
@@ -227,20 +227,19 @@ In Freizeitpark-Aufbauspielen (*RollerCoaster Tycoon*, *Planet Coaster*) entsche
    - Ermitteln Sie das 95%-Konfidenzintervall der maximalen Wartezeit eines regulären Gastes.
    - Visualisieren Sie die Wartezeitverteilung in ScottPlot 5.
 
----
 
-## 5. Akzeptanzkriterien & Definition of Done
+## 5. Akzeptanzkriterien & Bewertungsrubrik (10 Punkte)
 
 Für die volle Punktzahl (10 Punkte) müssen folgende Kriterien erfüllt sein:
 
 | Kriterium | Punkte | Beschreibung |
 | :--- | :---: | :--- |
-| **DES-Engine & PriorityQueue** | **3 P.** | Korrekte Future Event List mit `PriorityQueue`; reiner ereignisdiskreter Zeitsprung ($t \leftarrow t_{\text{event}}$); saubere Trennung von Arrival und Departure. |
-| **Inversionsmethode & Prioritäten** | **3 P.** | Mathematisch exakte Inversionsmethode für $\text{Exp}(\lambda)$; Prioritätsbehandlung (Express/Fastpass) einwandfrei abgebildet. |
-| **Little's Gesetz & Verifikation** | **2 P.** | Empirischer Nachweis von $\bar{L} = \lambda_{\text{eff}} \cdot \bar{W}$ inklusive korrekter Berücksichtigung abgewiesener Einheiten ($P_{\text{Block}}$) im Bericht. |
-| **Monte-Carlo & ScottPlot** | **2 P.** | Parallele Ausführung von 100 Replikationen (`Parallel.For`); Berechnung des 95%-Konfidenzintervalls; ansprechendes Histogramm in ScottPlot 5. |
+| **DES-Engine & PriorityQueue** | 3 P. | Korrekte Future Event List mit `PriorityQueue`; reiner ereignisdiskreter Zeitsprung ($t \leftarrow t_{\text{event}}$); saubere Trennung von Arrival und Departure. |
+| **Inversionsmethode & Prioritäten** | 3 P. | Mathematisch exakte Inversionsmethode für $\text{Exp}(\lambda)$; Prioritätsbehandlung (Express/Fastpass) einwandfrei abgebildet. |
+| **Little's Gesetz & Verifikation** | 2 P. | Empirischer Nachweis von $\bar{L} = \lambda_{\text{eff}} \cdot \bar{W}$ inklusive korrekter Berücksichtigung abgewiesener Einheiten ($P_{\text{Block}}$) im Bericht. |
+| **Monte-Carlo & ScottPlot** | 2 P. | Parallele Ausführung von 100 Replikationen (`Parallel.For`); Berechnung des 95%-Konfidenzintervalls; ansprechendes Histogramm in ScottPlot 5. |
+| **Gesamt** | **10 P.** | **100 % der Übungseinheit** |
 
----
 
 ## 6. Online-Recherche-Box
 
@@ -257,7 +256,6 @@ Nutzen Sie zur Vorbereitung und Vertiefung folgende Quellen:
   - `Little's law verification simulation effective arrival rate`
   - `M/M/c/K queue blocking probability simulation C#`
 
----
 
 ## 7. Vibe-Coding Prompting-Tipps
 
@@ -271,7 +269,6 @@ Falls Sie KI-Assistenten verwenden, beachten Sie folgende Vorgaben zur Vermeidun
 > **Prompt-Vorlage 2: Inversionsmethode ohne mathematische Singularität**  
 > *„Zeige mir die C#-Formel zur Erzeugung einer exponentialverteilten Zufallsvariablen aus `Random.Shared`. Beachte: `1.0 - NextDouble()` verhindert die Auswertung von $\ln(0)$, was zu `-Infinity` führen würde: `double tau = -Math.Log(1.0 - rnd.NextDouble()) / lambda;`. Stelle sicher, dass der Random-Generator in parallelen Replikationen thread-sicher ist.“*
 
----
 
 ## 8. 🔍 Leitfragen für den Live-Showcase & Code-Defense (Säule 2b)
 

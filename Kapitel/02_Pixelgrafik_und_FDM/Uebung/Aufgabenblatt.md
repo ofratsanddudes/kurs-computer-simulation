@@ -3,15 +3,20 @@
 **Lehrveranstaltung:** Systemsimulation / Digitaler Zwilling  
 **Studiengang:** B.Sc. Automatisierungstechnik, 5. Semester  
 **Institution:** Fachhochschule Oberösterreich – Campus Wels  
-**Bearbeitungsform:** Zweistufige Hausübung im festen 2er-Team (1 Woche):
-- **Stufe 1 (Basisaufgabe):** Gemeinsames Fundament auf der C#-Vorlage (Richtwert ca. 60 Min. zu Hause)
-- **Stufe 2 (Vertiefungsaufgabe / Track-Ausbau):** Wahlmodell Track A (Industrie) **ODER** Track B (Simulation Game) (Richtwert ca. 3–4 h zu Hause)
-**Technologie-Vorgabe:** C# 12 / .NET 8 oder .NET 10, WPF mit `System.Windows.Media.Imaging.WriteableBitmap` und `Image`-Control.  
-> [!CAUTION]
-> **Vorgreif-Sperre für Termin 02:**  
-> In dieser Einheit ist ausschließlich rasterbasierte Pixelgrafik (`WriteableBitmap`, `byte[]`/`int[]` BackBuffer) zulässig. **KEIN** WPF Canvas (keine Vektorobjekte wie `Line` oder `Path`), **KEIN** ScottPlot, **KEIN** Multithreading (`Parallel.For` ist erst in Kapitel 06 erlaubt!), **KEIN** SharpGL 3D! Berechnungen laufen single-threaded im Takt eines Timers.
+**Bearbeitungsform:** Zweistufige Hausübung im 2er-Team (1 Woche)
 
----
+| Stufe | Richtwert | Thema / Inhalt |
+| :--- | :--- | :--- |
+| **Stufe 1 (Basisaufgabe)** | ca. 60 Min. | Von-Neumann-Stresstest, `uint[256]`-LUT & `AlphaMap` auf `PixelHeatFDM.sln` (`1.1`–`1.4`) |
+| **Stufe 2 – Track A (Industrie)** | ca. 3–4 h *(Wahl)* | Gamer-PC & Server-Blade Kühlkörper-Optimizer |
+| **Stufe 2 – Track B (Simulation Game)** | ca. 3–4 h *(Wahl)* | Falling Sand & Doom Fire / Lava-Simulator |
+
+> [!IMPORTANT]
+> **Technische Rahmenbedingungen**
+> - **Plattform & Projekt:** C# 12 / .NET 8 oder .NET 10, bereitgestellte WPF-Projektmappe (ohne zusätzliche NuGet-Pakete)
+> - **Zugelassene APIs:** `System.Windows.Media.Imaging.WriteableBitmap` (`byte[]`/`uint[]`-BackBuffer), `Image`-Control
+> - **Abgrenzung:** Single-threaded im Timer-Takt; keine Vektor-Shapes (`Canvas`/`Line`/`Path`) und keine Parallelisierung
+
 
 ## 1. Lernziele (Intended Learning Outcomes - ILOs)
 
@@ -22,7 +27,6 @@ Nach erfolgreicher Bearbeitung dieses Aufgabenblattes können Sie:
 4. **Physikalische Randbedingungen:** Dirichlet- (feste Temperatur), Neumann- (adiabater Rand / Wärmestrom) und Robin-Randbedingungen (konvektiver Wärmeübergang an Luft) auf einem diskreten Gitter korrekt abbilden.
 5. **Materialübergänge modellieren:** Lokale Inhomogenitäten von Wärmeleitfähigkeit und Wärmekapazität über gemittelte Gitterkoeffizienten sauber formulieren.
 
----
 
 ## 2. Mathematische Grundlagen
 
@@ -51,7 +55,6 @@ Wird diese Zeitschrittgrenze auch nur minimal überschritten, kommt es zu einem 
 3. **Robin-Rand (konvektiver Wärmeübergang an Kühlfluid mit Wärmeübergangskoeffizient $h$ und Umgebungstemperatur $T_\infty$):**
    $$-\lambda \frac{\partial T}{\partial n} = h (T_{\text{Oberfläche}} - T_\infty) \implies T_{0,j} = \frac{\lambda \cdot T_{1,j} + h \Delta x \cdot T_\infty}{\lambda + h \Delta x}$$
 
----
 
 ## 3. Stufe 1: Basisaufgabe (Gemeinsames Fundament auf der C#-Vorlage, Richtwert ca. 60 Min.)
 
@@ -60,31 +63,38 @@ Die Vorlage enthält bereits ein lauffähiges $128 \times 128$ Basis-Gitter (`fl
 **Ziel der Basisaufgabe (Stufe 1):** Analysieren Sie das Stabilitätsverhalten und erweitern Sie die Basis-Vorlage um eine vorberechnete **256-Stufen-Look-Up-Table (LUT)** sowie **interaktives Maus-Zeichnen von Wärmequellen und Isolator-Wänden** (als direktes Fundament für Stufe 2 Track A und Track B!).
 
 ### Aufgabenstellung (auf Basis von `Vorlage/PixelHeatFDM.sln`):
+**Vorbereitung – Starter-Kit untersuchen (`Vorlage/PixelHeatFDM.sln`):**
+- Öffnen Sie die Solution `Vorlage/PixelHeatFDM.sln` und verschaffen Sie sich einen Überblick über das Wärmegitter (`HeatGrid.cs`), den `WriteableBitmap`-Renderer (`BitmapHeatRenderer.cs`) und die UI-Schleife (`MainWindow.xaml.cs`).
+
 1. **Aufgabe 1.1 – Code-Walkthrough & Experimenteller Von-Neumann-Stresstest ($s > 0{,}25$):**
    - Starten Sie `PixelHeatFDM` und führen Sie die bestehenden Unit-Tests (`dotnet test`) aus.
-   - Prüfen Sie die Parameter in `HeatGrid.cs`: $\alpha = 1{,}0 \times 10^{-4}\,\text{m}^2/\text{s}$, $\Delta x = 1\,\text{mm} = 0{,}001\,\text{m} \implies \Delta t_{\text{krit}} = \frac{\Delta x^2}{4\alpha} = 0{,}0025\,\text{s}$.
+   - Prüfen Sie die Parameter in `HeatGrid.cs`: $\alpha = 1{,}0 \times 10^{-4}\,\text{m}^2/\text{s}$, $\Delta x = 1\,\text{mm} = 0{,}001\,\text{m} \implies \Delta t_{\text{krit}} = \frac{\Delta x^2}{4\alpha} = 0{,}00250\,\text{s}$ (bei $\Delta t = 0{,}0020\,\text{s}$ gilt $s = 0{,}2000 \le 0{,}25$).
+   - *Selbsttest-Referenzwert (5-Sekunden-Selbstkontrolle):* Setzt man auf einem $0\,^\circ\text{C}$-Gitter einen einzelnen Hotspot $T_{8,8}^0 = 100\,^\circ\text{C}$, liefert exakt **ein** Zeitschritt (`Step()`) bei $s = 0{,}20$ im Zentrum $T_{8,8}^1 = 100 + 0{,}20 \cdot (0 + 0 + 0 + 0 - 400) = 20{,}0\,^\circ\text{C}$ sowie auf jedem der 4 direkten Nachbarn exakt $20{,}0\,^\circ\text{C}$ (Energiesumme bleibt exakt $5 \times 20{,}0 = 100{,}0\,^\circ\text{C}$). Bei instabilem $\Delta t = 0{,}0035\,\text{s}$ ($s = 0{,}35 > 0{,}25$) kippt das Zentrum schon nach dem 1. Schritt auf $T_{8,8}^1 = 100 + 0{,}35 \cdot (-400) = -40{,}0\,^\circ\text{C}$!
    - Erhöhen Sie $\Delta t$ über den Slider schrittweise von $0{,}0020\,\text{s}$ ($s = 0{,}20$) auf $> 0{,}0026\,\text{s}$ ($s > 0{,}26$). Beobachten und erklären Sie das entstehende Schachbrett-Oszillationsmuster bis zum Magenta-Überlauf (`float.IsNaN` / `float.IsInfinity`).
    - Schalten Sie zwischen **Dirichlet-Rand** (feste $20\,^\circ\text{C}$) und **Neumann-Rand** (adiabat isoliert) um und beobachten Sie den Wärmestau am Rand.
 2. **Aufgabe 1.2 – Performance-Upgrade: $O(1)$ Look-Up-Table (`uint[256]`) in `BitmapHeatRenderer.cs`:**
    - Aktuell berechnet `BitmapHeatRenderer.MapTemperatureToColor(...)` für jedes der $16\,384$ Pixel pro Frame mehrfach `if/else`-Verzweigungen und Gleitkomma-Divisionen.
-   - Legen Sie in `BitmapHeatRenderer` ein Array `private readonly uint[] _colorLut = new uint[256];` an und befüllen Sie dieses **einmalig im Konstruktor** für die 256 normierten Temperaturstufen ($0 \dots 255$).
+   - Legen Sie in `BitmapHeatRenderer` ein Array `private readonly uint[] _colorLut = new uint[256];` an und befüllen Sie dieses **einmalig im Konstruktor** für die 256 normierten Temperaturstufen ($0 \dots 255$, z. B. via `MapTemperatureToColor(i / 255.0f, 0.0f, 1.0f)`).
    - Ersetzen Sie den Aufruf in der `Render`-Schleife durch einen direkten $O(1)$-Tabellenzugriff:
      ```csharp
      int lutIndex = (int)Math.Clamp((t - minTemp) / range * 255.0f, 0.0f, 255.0f);
      _pixelBuffer[index++] = float.IsNaN(t) || float.IsInfinity(t) ? 0xFFFF00FFu : _colorLut[lutIndex];
      ```
+   - *Selbsttest-Referenzwerte (`minTemp = 20`, `maxTemp = 100`, `range = 80`):* `_colorLut[0] == 0xFF0000FFu` (Reinblau bei $20\,^\circ\text{C}$), `MapTemperatureToColor(60f, 20f, 80f) == 0xFF00FF00u` (Reingrün bei $60\,^\circ\text{C}$), `_colorLut[255] == 0xFFFF0000u` (Reinrot bei $100\,^\circ\text{C}$) sowie `0xFFFF00FFu` (Magenta) bei `float.NaN`.
 3. **Aufgabe 1.3 – Ortsabhängiges Materialgitter (`AlphaMap`) & Interaktives Maus-Zeichnen:**
-   - Erweitern Sie `HeatGrid` um ein 2D-Array `private readonly float[,] _alphaMap;` (initialisiert mit `Alpha`, wobei in der Literatur oft $a \equiv \alpha = \frac{\lambda}{\rho c_p}$ geschrieben wird), sodass in `Step()` lokal mit $s_{x,y} = \frac{\alpha_{x,y} \cdot \Delta t}{\Delta x^2}$ gerechnet wird.
+   - Erweitern Sie `HeatGrid` um ein 2D-Array `private readonly float[,] _alphaMap;` (inkl. Zugriffsmethoden `GetAlpha(int x, int y)` und `SetAlpha(int x, int y, float value)` sowie Zurücksetzen auf `Alpha` in `Reset()`), sodass in `Step()` lokal mit $s_{x,y} = \frac{\alpha_{x,y} \cdot \Delta t}{\Delta x^2}$ gerechnet wird (für Isolatorzellen mit $\alpha_{x,y} = 0$ bleibt `_tNext[x, y] = _tCurrent[x, y]`). Aktualisieren Sie außerdem beim Ändern der Property `Alpha` (`set`-Accessor) alle Nicht-Wand-Zellen (`_alphaMap[x, y] > 0f`) auf den neuen `Alpha`-Wert, damit der Schieberegler `SliderAlpha` auch im Live-Betrieb wirksam bleibt!
    - **Wichtige Physik-Regel für echte adiabate Isolator-Wände ($\alpha_{x,y} = 0$):** Wenn eine Nachbarzelle ein Isolator ist (`_alphaMap[nx, ny] == 0f`), darf kein Wärmestrom in diese Wandzelle abfließen (sonst würde eine auf $20\,^\circ\text{C}$ gehaltene Wandzelle als *Kühlrippe / Wärmesenke* wirken!). Spiegeln Sie daher an Isolator-Nachbarn die eigene Temperatur `tCenter` (lokale Neumann-Bedingung $\frac{\partial T}{\partial n} = 0$):
      ```csharp
      float tRight = _alphaMap[x + 1, y] == 0f ? tCenter : _tCurrent[x + 1, y]; // analog für Left, Up, Down
      ```
-   - Abonnieren Sie auf `HeatImage` (in `MainWindow.xaml` / `MainWindow.xaml.cs`) die Events `MouseDown` und `MouseMove`. Rechnen Sie die Mausposition `Point pos = e.GetPosition(HeatImage)` über die Bildabmessungen (`HeatImage.ActualWidth`, `ActualHeight`) in Gitterkoordinaten `(int gx, int gy)` $\in [0, 127]^2$ um:
-     - **Linke Maustaste gedrückt:** Zeichnen Sie mit einem Pinselradius von 2 Pixeln heiße Quellen ($T = 100\,^\circ\text{C}$) direkt in das laufende Gitter.
-     - **Rechte Maustaste gedrückt:** Zeichnen Sie thermische Isolator-Wände ($\alpha_{x,y} = 0$) ins Gitter und stellen Sie diese im Renderer dunkelgrau (`0xFF404040`) dar.
-- **Erwartetes Ergebnis:** Die Wärmewolke strömt in Echtzeit adiabat (ohne Wärmeverlust an den Wänden) um Ihre per Maus gezeichneten Isolator-Labyrinthe herum!
+   - *Selbsttest-Referenzwert (Neumann-Spiegelung):* Sitzt rechts neben einem Einzel-Hotspot $T_{8,8}^0 = 100\,^\circ\text{C}$ (übriges Gitter $0\,^\circ\text{C}$, $s = 0{,}20$) eine Isolator-Zelle (`SetAlpha(9, 8, 0.0f)`), ergibt `Step()` wegen `tRight = 100` exakt $L_{8,8} = 100 + 0 + 0 + 0 - 400 = -300$ und damit $T_{8,8}^1 = 100 + 0{,}20 \cdot (-300) = 40{,}0\,^\circ\text{C}$ (während die Wandzelle $(9,8)$ exakt auf $0{,}0\,^\circ\text{C}$ bleibt!).
+   - Abonnieren Sie auf `HeatImage` (in `MainWindow.xaml` / `MainWindow.xaml.cs`) die Events `MouseDown` und `MouseMove`. Rechnen Sie `Point pos = e.GetPosition(HeatImage)` über `HeatImage.ActualWidth` und `ActualHeight` in Gitterkoordinaten `(int gx, int gy)` um und begrenzen Sie innerhalb der Pinselschleife (`dx, dy` $\in \{-2 \dots +2\}$) jede Zielzelle `(px, py) = (gx + dx, gy + dy)` per `Math.Clamp` auf `[1, Width - 2]` bzw. `[1, Height - 2]`, damit der Pinsel am Bildrand keine `IndexOutOfRangeException` auslöst:
+     - **Linke Maustaste (`e.LeftButton == MouseButtonState.Pressed`):** Zeichnen Sie mit einem Pinselradius von 2 Pixeln heiße Quellen ($T = 100\,^\circ\text{C}$) direkt in das laufende Gitter.
+     - **Rechte Maustaste (`e.RightButton == MouseButtonState.Pressed`):** Zeichnen Sie thermische Isolator-Wände (`SetAlpha(..., 0f)`) ins Gitter und stellen Sie diese in `BitmapHeatRenderer.Render(...)` dunkelgrau (`0xFF404040u`) dar.
+4. **Aufgabe 1.4 – Automatisierte Verifikation mit Unit-Tests (`PixelHeatFDM.Tests` / `dotnet test`):**
+   - Öffnen Sie `PixelHeatFDM.Tests/HeatGridTests.cs`, kommentieren Sie in der Testmethode `Test_GoldenReference_SingleStepAndColorMapping_Stage1()` den vorbereiteten `TODO [Stufe 1 - Aufgabe 1.4]`-Prüfblock für die adiabate Isolator-Wand ($T_{8,8}^1 = 40{,}0\,^\circ\text{C}$ vor `SetAlpha(9, 8, 0.0f)`) ein und führen Sie `dotnet test` aus, bis alle **4 Unit-Tests** in `PixelHeatFDM.Tests` fehlerfrei auf Grün stehen.
+- **Erwartetes Ergebnis nach Stufe 1:** Die Wärmewolke strömt in Echtzeit adiabat (ohne Wärmeverlust an den Wänden) um Ihre per Maus gezeichneten Isolator-Labyrinthe herum und alle Unit-Tests bestehen!
 
----
 
 ## 4. Stufe 2: Vertiefungsaufgabe / Track-Ausbau (Wahlmodell: Track A ODER Track B)
 
@@ -93,21 +103,15 @@ Die Vorlage enthält bereits ein lauffähiges $128 \times 128$ Basis-Gitter (`fl
 > Wählen Sie als 2er-Team für die Hausübung **entweder Track A (Industrie)** ODER **Track B (Simulation Game)**.  
 > Beide Tracks basieren auf der 2D-Gitterdiskretisierung und performantem Pixel-Rendering mit `WriteableBitmap` und führen zur Höchstpunktzahl (10 Punkte).
 
-```
-                    ┌──────────────────────────────────────────────┐
-                    │ WÄHLEN SIE GENAU EINEN DER BEIDEN TRACKS:    │
-                    └──────────────────────┬───────────────────────┘
-                                           │
-                 ┌─────────────────────────┴─────────────────────────┐
-                 ▼                                                   ▼
-┌─────────────────────────────────┐                 ┌─────────────────────────────────┐
-│  Track A: Industrie & Mechatronik│                 │   Track B: Simulation Game      │
-│  Gamer-PC & Server-Blade        │                 │   Falling Sand & Doom Fire /    │
-│  Kühlkörper-Optimizer (Robin)   │                 │   Lava-Diffusions-Simulator     │
-└─────────────────────────────────┘                 └─────────────────────────────────┘
+```mermaid
+flowchart TD
+    Choice(["<b>Wählen Sie genau einen Track</b><br/><i>Stufe 2 · Wahlmodell</i>"]) -->|Industrie-Fokus| A["<b>Track A: Industrie</b><br/><i>Gamer-PC & Server-Blade Kühlkörper-Optimizer</i>"]
+    Choice -->|Game-Fokus| B["<b>Track B: Simulation Game</b><br/><i>Falling Sand & Doom Fire / Lava-Simulator</i>"]
+    style Choice fill:#f8fafc,stroke:#475569,stroke-width:2px,color:#0f172a
+    style A fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    style B fill:#f0fdf4,stroke:#15803d,stroke-width:2px,color:#14532d
 ```
 
----
 
 ### Track A (Industrie): Gamer-PC & Server-Blade Kühlkörper-Optimizer
 
@@ -117,7 +121,7 @@ In Hochleistungs-Servern oder Gaming-PCs führt die Abwärme moderner Multi-Core
 #### Geometrie- & Materialzonen:
 1. **CPU-Die (Zentrum unten, $40 \times 10$ Pixel):**
    - Silizium: $\lambda_{\text{Si}} = 148\,\text{W/m}\cdot\text{K}$, $\rho = 2330\,\text{kg/m}^3$, $c_{\text{p}} = 712\,\text{J/kg}\cdot\text{K} \implies a_{\text{Si}} \approx 8{,}9 \times 10^{-5}\,\text{m}^2/\text{s}$.
-   - Verlustleistung: $P_{\text{loss}} = 150\,\text{W}$ gleichmäßig im Die verteilt als Quellterm $\dot{q}_{\text{v}}$.
+   - Verlustleistung: $P_{\text{loss}} = 150\,\text{W}$ gleichmäßig im Die verteilt als Quellterm $\dot{q}_{\text{v}} = P_{\text{loss}} / V_{\text{Die}}$ bei einer Bauteiltiefe senkrecht zur Ebene von $L_z = 40\,\text{mm}$ ($V_{\text{Die}} = 8\,\text{mm} \times 2\,\text{mm} \times 40\,\text{mm} = 6{,}4 \times 10^{-7}\,\text{m}^3$).
 2. **Wärmeleitpaste (TIM - Thermal Interface Material, Schichtdicke 2 Pixel direkt über Die):**
    - Dünne Schicht: $\lambda_{\text{TIM}} = 4{,}5\,\text{W/m}\cdot\text{K}$, $a_{\text{TIM}} \approx 2{,}5 \times 10^{-6}\,\text{m}^2/\text{s}$.
 3. **Kupfer-Heatspreader (über Die und TIM, $120 \times 20$ Pixel):**
@@ -135,7 +139,7 @@ In Hochleistungs-Servern oder Gaming-PCs führt die Abwärme moderner Multi-Core
 
 #### Aufgabenstellung Track A:
 1. **Arbeitspaket A.1 – Inhomogenes Gitter:** Implementieren Sie die FDM-Engine mit inhomogenem Gitter ($a_{i,j}$ und $\dot{q}_{i,j}$ matrixbasiert).
-2. **Arbeitspaket A.2 – Robin-Randbedingungen:** Setzen Sie die Robin-Randbedingungen an allen Grenzflächen zwischen Kühlfinne und Luft exakt um.
+2. **Arbeitspaket A.2 – Wärmequelle & Robin-Randbedingungen:** Setzen Sie den volumetrischen Quellterm $\dot{q}_{\text{v}} = P_{\text{loss}} / V_{\text{Die}}$ für $P_{\text{loss}} = 150\,\text{W}$ mit Bauteiltiefe $L_z = 40\,\text{mm}$ ($V_{\text{Die}} = 8\,\text{mm} \times 2\,\text{mm} \times 40\,\text{mm} = 6{,}4 \times 10^{-7}\,\text{m}^3$) sowie die Robin-Randbedingungen an allen Grenzflächen zwischen Kühlfinne und Luft exakt um.
 3. **Arbeitspaket A.3 – Interaktive Lüftersteuerung:** Fügen Sie der GUI Umschaltknöpfe oder Slider hinzu:
    - Umschaltung: Lüfter Normal ($h=250$) vs. Lüfterausfall ($h=20$).
    - Live-Anzeige der CPU-Maximaltemperatur $T_{\max}(t)$ als Text.
@@ -143,7 +147,6 @@ In Hochleistungs-Servern oder Gaming-PCs führt die Abwärme moderner Multi-Core
    - Ermitteln Sie analytisch $\Delta t_{\text{krit}} = \frac{\Delta x^2}{4 a_{\max}}$ für Kupfer ($a_{\max} \approx 1{,}15 \times 10^{-4}\,\text{m}^2/\text{s}$).
    - Verdoppeln Sie im Test $\Delta t$ schrittweise und dokumentieren Sie den exakten Punkt, an dem das Gitter numerisch explodiert.
 
----
 
 ### Track B (Simulation Game): Falling Sand & Doom Fire / Lava-Simulator
 
@@ -175,20 +178,18 @@ Klassische zelluläre Physik-Spiele (*Powder Toy*, *Noita*, *Doom Fire*) faszini
 3. **Arbeitspaket B.3 – Pointer-Performance & Maus-Werkzeuge:** Gewährleisten Sie eine butterweiche Bildrate ($\ge 45\,\text{FPS}$) bei voll interagierendem Gitter über direkten Pointer-Zugriff auf `WriteableBitmap.BackBuffer`.
 4. **Arbeitspaket B.4 – Stabilitätsanalyse:** Zeigen Sie, was geschieht, wenn der Diffusionskoeffizient der Hitze über das Stabilitätslimit getrieben wird (Artefakte, Streifenbildung).
 
----
 
 ## 5. Akzeptanzkriterien & Bewertungsrubrik (10 Punkte)
 
 | Kriterium | Punkte | Beschreibung |
 | :--- | :---: | :--- |
-| **Korrektheit der 2D-FDM-Gleichung** | 3 P. | Mathematisch einwandfreier 5-Punkt-Differenzenstern mit Double-Buffering (kein In-Place-Überschreiben). |
-| **Effiziente WriteableBitmap-Pipeline** | 3 P. | Null Speicherallokationen im Render-Loop (0 B GC Alloc). Schneller Puffer-Transfer (`Lock`, `BackBuffer`, `AddDirtyRect`). |
-| **Randbedingungen & Interaktivität** | 2 P. | **Track A:** Exakte Robin-Konvektion und Lüfterumschaltung. **Track B:** Flüssiges Partikelgießen und Materialumwandlung via Maus. |
-| **Experimenteller Stabilitätsnachweis** | 1 P. | Präzise Dokumentation des Übergangs in numerische Instabilität bei $\Delta t > \Delta t_{\text{krit}}$ mit Screenshot. |
+| **2D-FDM-Gleichung & Unit-Tests (`1.1`, `1.3`, `1.4`, `A.1`/`B.1`)** | 3 P. | Mathematisch einwandfreier 5-Punkt-Differenzenstern mit Double-Buffering, adiabater Neumann-Spiegelung und grünen Unit-Tests (`dotnet test`). |
+| **WriteableBitmap-Pipeline & LUT (`1.2`, `B.2`–`B.3`)** | 3 P. | Null Speicherallokationen im Render-Loop (0 B GC Alloc), vorberechnete $O(1)$-Farbtabelle (`uint[256]`) und schneller Puffer-Transfer (`Lock`, `BackBuffer`, `AddDirtyRect`). |
+| **Randbedingungen & Interaktivität (`1.3`, `A.2`–`A.3` / `B.1`–`B.3`)** | 2 P. | Interaktives Maus-Zeichnen in Stufe 1 sowie **Track A:** exakte Robin-Konvektion & Lüfterumschaltung bzw. **Track B:** flüssiges Partikelgießen & Phasenwechsel. |
+| **Experimenteller Stabilitätsnachweis (`1.1`, `A.4` / `B.4`)** | 1 P. | Präzise Dokumentation des Übergangs in numerische Instabilität bei $\Delta t > \Delta t_{\text{krit}}$ ($s > 0{,}25$) mit Screenshot. |
 | **Dokumentation & Code-Qualität** | 1 P. | Saubere Struktur, übersichtliche `README.md` mit Erklärung der Materialkennwerte bzw. Automatenregeln. |
 | **Gesamt** | **10 P.** | **100 % der Übungseinheit** |
 
----
 
 ## 6. Online-Recherche-Box
 
@@ -201,7 +202,6 @@ Klassische zelluläre Physik-Spiele (*Powder Toy*, *Noita*, *Doom Fire*) faszini
   - `2D heat equation finite difference Robin boundary condition`
   - `cellular automata falling sand algorithm grid implementation`
 
----
 
 ## 7. Vibe-Coding Prompting-Tipps
 
@@ -218,7 +218,6 @@ Verwende KEIN SetPixel, KEIN Canvas und KEIN Multithreading (Single-Threaded Dis
 Implementiere ein ortsabhängiges Materialgitter float[,] _alphaMap sowie für Track A die konvektive Robin-Randbedingung mit Wärmeübergangskoeffizient h bzw. für Track B den zellulären Partikelautomaten.
 ```
 
----
 
 ## 8. 🔍 Leitfragen für den Live-Showcase & Code-Defense (Säule 2b)
 

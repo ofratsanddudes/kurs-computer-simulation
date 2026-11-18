@@ -38,6 +38,9 @@ const puppeteer = requireLocalOrGlobal('puppeteer');
 const marked = requireLocalOrGlobal('marked');
 const katex = requireLocalOrGlobal('katex');
 const hljs = requireLocalOrGlobal('highlight.js');
+const MERMAID_JS_PATH = require.resolve('mermaid/dist/mermaid.min.js', {
+  paths: [__dirname, path.resolve(__dirname, '..'), ROAMING_NPM]
+});
 
 const CHROME_PATHS = [
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -169,13 +172,20 @@ Beispiele:
 // ------------------------------------------------------------------------------
 // 5. MARP Slides Export
 // ------------------------------------------------------------------------------
-function exportSingleSlideDeck(dirName, marpCmd) {
+function stripLocalMdLinksForPdf(mdContent) {
+  // Ersetzt relative .md-Hyperlinks [Label](./Pfad.md#...) durch reinen Text Label,
+  // damit im PDF keine toten lokalen Dateipfade stehen (externe http(s)-Links & Bilder ![...] bleiben unberührt).
+  return mdContent.replace(/(?<!!)\[([^\]]+)\]\(((?!https?:\/\/)[^)\s]+\.md(?:#[^)\s]*)?)\)/gi, '$1');
+}
+
+function exportSingleSlideDeck(dirName, mdFileName, marpCmd) {
   const folienDir = path.join(KAPITEL_DIR, dirName, 'Folien');
   const moodleDir = path.join(KAPITEL_DIR, dirName, 'Moodle');
   fs.mkdirSync(moodleDir, { recursive: true });
-  const inputMd = path.join(folienDir, 'Folien.md');
-  const sanitizedName = sanitizeUmlauts(dirName);
-  const exportPdf = path.join(moodleDir, `${sanitizedName}_Folien.pdf`);
+  const inputMd = path.join(folienDir, mdFileName);
+  const sanitizedDir = sanitizeUmlauts(dirName);
+  const baseDeckName = sanitizeUmlauts(path.basename(mdFileName, '.md'));
+  const exportPdf = path.join(moodleDir, `${sanitizedDir}_${baseDeckName}.pdf`);
 
   if (!fs.existsSync(inputMd)) {
     throw new Error(`Datei nicht gefunden: ${inputMd}`);
@@ -187,14 +197,51 @@ function exportSingleSlideDeck(dirName, marpCmd) {
     env.CHROME_PATH = browserExec;
   }
 
-  // CLI-Aufruf marp-cli direkt in den jeweiligen Kapitel/XX_*/Moodle/ Ordner
-  const cmd = `${marpCmd} --no-stdin --theme-set "${THEMEN_CSS}" --allow-local-files --pdf "${inputMd}" -o "${exportPdf}"`;
-  execSync(cmd, { stdio: 'pipe', env });
+  const rawMd = fs.readFileSync(inputMd, 'utf8');
+  const cleanMdForPdf = stripLocalMdLinksForPdf(rawMd);
+  const hasSolutions = /<!--\s*_class:\s*solution\s*-->/i.test(cleanMdForPdf);
+
+  if (!hasSolutions) {
+    const tmpExportMd = path.join(folienDir, `.tmp_pdf_${mdFileName}`);
+    fs.writeFileSync(tmpExportMd, cleanMdForPdf, 'utf8');
+    try {
+      const cmd = `${marpCmd} --no-stdin --theme-set "${THEMEN_CSS}" --allow-local-files --pdf "${tmpExportMd}" -o "${exportPdf}"`;
+      execSync(cmd, { stdio: 'pipe', env });
+    } finally {
+      if (fs.existsSync(tmpExportMd)) fs.unlinkSync(tmpExportMd);
+    }
+    const stat = fs.statSync(exportPdf);
+    return {
+      dirName: mdFileName === 'Folien.md' ? dirName : `${dirName} (${mdFileName})`,
+      sanitizedName: `${sanitizedDir}_${baseDeckName}`,
+      exportPdf,
+      size: stat.size
+    };
+  }
+
+  // 1. Vorab-Moodle-PDF ohne Lösungsfolien
+  const studentSlides = cleanMdForPdf.split(/^---$/m).filter(s => !/<!--\s*_class:\s*solution\s*-->/i.test(s));
+  const tmpStudentMd = path.join(folienDir, `.tmp_student_${mdFileName}`);
+  const tmpSolMd = path.join(folienDir, `.tmp_sol_${mdFileName}`);
+  fs.writeFileSync(tmpStudentMd, studentSlides.join('---'), 'utf8');
+  fs.writeFileSync(tmpSolMd, cleanMdForPdf, 'utf8');
+  try {
+    const cmdStudent = `${marpCmd} --no-stdin --theme-set "${THEMEN_CSS}" --allow-local-files --pdf "${tmpStudentMd}" -o "${exportPdf}"`;
+    execSync(cmdStudent, { stdio: 'pipe', env });
+
+    // 2. Vollständiges Lösungs-PDF (*_Folien_Loesungen.pdf)
+    const solutionPdf = exportPdf.replace(/\.pdf$/i, '_Loesungen.pdf');
+    const cmdSol = `${marpCmd} --no-stdin --theme-set "${THEMEN_CSS}" --allow-local-files --pdf "${tmpSolMd}" -o "${solutionPdf}"`;
+    execSync(cmdSol, { stdio: 'pipe', env });
+  } finally {
+    if (fs.existsSync(tmpStudentMd)) fs.unlinkSync(tmpStudentMd);
+    if (fs.existsSync(tmpSolMd)) fs.unlinkSync(tmpSolMd);
+  }
 
   const stat = fs.statSync(exportPdf);
   return {
-    dirName,
-    sanitizedName,
+    dirName: mdFileName === 'Folien.md' ? `${dirName} (+ Loesungen)` : `${dirName} (${mdFileName})`,
+    sanitizedName: `${sanitizedDir}_${baseDeckName}`,
     exportPdf,
     size: stat.size
   };
@@ -202,7 +249,7 @@ function exportSingleSlideDeck(dirName, marpCmd) {
 
 async function exportAllSlides(filterChapter = null) {
   console.log('\n' + '='.repeat(70));
-  console.log(' MARP-FOLIENSÄTZE EXPORTIEREN');
+  console.log(' MARP-FOLIENSÄTZE (INKL. ANHÄNGE) EXPORTIEREN');
   console.log('='.repeat(70));
 
   const marpCmd = getMarpCommand();
@@ -220,20 +267,33 @@ async function exportAllSlides(filterChapter = null) {
     }
   }
 
+  const deckTasks = [];
+  for (const dir of targetDirs) {
+    const folienDir = path.join(KAPITEL_DIR, dir, 'Folien');
+    deckTasks.push({ dir, mdFileName: 'Folien.md' });
+    const anhaenge = fs.readdirSync(folienDir)
+      .filter(f => /^Folien_Anhang_.*\.md$/i.test(f))
+      .sort();
+    for (const anh of anhaenge) {
+      deckTasks.push({ dir, mdFileName: anh });
+    }
+  }
+
   const results = [];
-  for (let idx = 0; idx < targetDirs.length; idx++) {
-    const dir = targetDirs[idx];
-    const progress = `[${idx + 1}/${targetDirs.length}]`;
-    process.stdout.write(`  ${progress} Konvertiere Folien: ${dir} ... `);
+  for (let idx = 0; idx < deckTasks.length; idx++) {
+    const { dir, mdFileName } = deckTasks[idx];
+    const label = mdFileName === 'Folien.md' ? dir : `${dir}/${mdFileName}`;
+    const progress = `[${idx + 1}/${deckTasks.length}]`;
+    process.stdout.write(`  ${progress} Konvertiere Folien: ${label} ... `);
     const start = Date.now();
     try {
-      const res = exportSingleSlideDeck(dir, marpCmd);
+      const res = exportSingleSlideDeck(dir, mdFileName, marpCmd);
       const elapsed = ((Date.now() - start) / 1000).toFixed(1);
       console.log(`OK (${formatBytes(res.size)}, ${elapsed}s)`);
       results.push({ ...res, success: true, elapsed });
     } catch (err) {
       console.log(`FEHLER: ${err.message}`);
-      results.push({ dirName: dir, success: false, error: err.message });
+      results.push({ dirName: label, success: false, error: err.message });
     }
   }
 
@@ -290,6 +350,10 @@ function renderAufgabenblattToHtml(mdContent, terminTitle) {
   renderer.code = function(tokenOrCode, lang) {
     let code = typeof tokenOrCode === 'object' ? tokenOrCode.text : tokenOrCode;
     let language = (typeof tokenOrCode === 'object' ? tokenOrCode.lang : lang) || '';
+    if (language.toLowerCase() === 'mermaid') {
+      const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return `<div class="mermaid">${escaped}</div>`;
+    }
     let highlighted = '';
     if (language && hljs.getLanguage(language)) {
       try {
@@ -553,6 +617,19 @@ function buildExerciseDocument(renderedBody, terminTitle) {
       font-size: 1.05em;
     }
 
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      margin: 10px 0 12px 0;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+
     a {
       color: #0969da;
       text-decoration: none;
@@ -620,6 +697,31 @@ async function exportAllExercises(browser, filterTermin = null) {
       fs.writeFileSync(tmpHtml, fullHtml, 'utf8');
 
       await page.goto('file:///' + tmpHtml.replace(/\\/g, '/'), { waitUntil: 'networkidle0' });
+
+      if (fullHtml.includes('class="mermaid"') && MERMAID_JS_PATH) {
+        await page.addScriptTag({ path: MERMAID_JS_PATH });
+        await page.evaluate(async () => {
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: 'base',
+            flowchart: {
+              useMaxWidth: false,
+              padding: 12,
+              nodeSpacing: 36,
+              rankSpacing: 36
+            },
+            themeVariables: {
+              primaryColor: '#eff6ff',
+              primaryBorderColor: '#2563eb',
+              primaryTextColor: '#0f172a',
+              lineColor: '#475569',
+              fontFamily: 'Segoe UI, Arial, sans-serif',
+              fontSize: '12.5px'
+            }
+          });
+          await mermaid.run();
+        });
+      }
 
       await page.pdf({
         path: exportPdfNamed,

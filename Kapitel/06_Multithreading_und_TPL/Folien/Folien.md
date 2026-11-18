@@ -7,24 +7,26 @@ paginate: true
 math: mathjax
 ---
 
+<!-- _class: title -->
 <!-- _paginate: false -->
 <!-- _header: "" -->
 <!-- _footer: "" -->
 
-![bg right](./Titelbild.jpg)
+![bg](./Titelbild.jpg)
 
 # Kapitel 6: Multithreading & Parallele Simulation
 
 Dieses Kapitel umfasst die folgenden Abschnitte:
 
-- 6.1: Grundlagen: Prozesse, Threads & Parallelität
-- 6.2: Task Parallel Library (`Parallel.For` & `Parallel.ForEach`)
-- 6.3: Threadsichere Datenstrukturen (`ConcurrentBag<T>`)
-- 6.4: Synchronisation & Race Conditions (`lock`)
-- 6.5: Parallele Zufallszahlen & thread-lokale Zustände
-- 6.6: Multithreading in WPF-Anwendungen
+- 6.1: Grundlagen: Prozesse, Threads & Skalierung
+- 6.2: Task Parallel Library (`Parallel.For` & `ConcurrentBag<T>`)
+- 6.3: Synchronisation, Cache-Effizienz & Zufallszahlen
+- 6.4: Asynchrone WPF-Entkopplung (`Task.Run` & Architektur)
+- 6.5: Fortschritt & Abbruch (`IProgress<T>` & `CancellationToken`)
 
 ---
+
+<!-- _class: showcase -->
 
 ### Live-Showcase & Code-Defense: Termin 05
 
@@ -41,7 +43,7 @@ Präsentation der Hausübung aus Termin 05 (**Stufe 1: Basisaufgabe** + **Stufe 
 </div>
 <div class="two">
 
-#### Stufe 2 – Track B: Arcade Claw Machine (Game)
+#### Stufe 2 – Track B: 3D Arcade Claw Crane (Game)
 - **Szenengraph:** Jahrmarkt-Greifautomat mit Portalbrücke, Seilwinde & 3-Finger-Greifer.
 - **Interaktion:** Tastatursteuerung, Orbit-Kamera inkl. Panning & 3D-Kollisionsprüfung.
 - **Stresstest:** Physikalischer Kollisions-Snap & Achs-Hierarchie beim Ablegen prüfen.
@@ -53,11 +55,35 @@ Präsentation der Hausübung aus Termin 05 (**Stufe 1: Basisaufgabe** + **Stufe 
 
 ---
 
-## 6.1: Grundlagen: Prozesse, Threads & Parallelität
+<!-- _class: recap -->
+
+### Kontext & Einordnung: Von der Visualisierung zur parallelen Rechenpipeline
+
+<div class="columns top">
+<div class="two">
+
+In **T02 bis T05** bauten wir 2D-/3D-Oberflächen – warum ist **T06** heute das Scharnier zur 2. Hälfte?
+
+- **Bisheriges Budget (T02–T05):** Laufen Physik & Rendering im **WPF UI-Thread**, bleiben bei $60\,\text{FPS}$ nur **$16{,}6\,\text{ms}$**.
+- **Engpass ab T07–T10:** FEM, Differentialgleichungen (DGL) und DES dauern Sekunden $\implies$ **UI friert ein**!
+- **Lösung heute:** **UI-Dispatcher** und **Worker-Threads** trennen (`Task.Run`, `IProgress`, `Parallel.For`).
+
+</div>
+<div class="two">
+
+![](./Diagramme/Semester_Scharnier_T06.svg)
+
+</div>
+</div>
+
+---
+
+## 6.1: Grundlagen: Prozesse, Threads & Skalierung
+
+![bg](./Illustrationen/Abschnitt_1.jpg)
 
 Dieser Abschnitt umfasst die folgenden Inhalte:
 
-- Brücke zu Termin 02–05 und Scharnier zum Modellierungs-Block (T07–T10)
 - Motivation: Auslastung moderner Mehrkern-Prozessoren
 - Unterschied: Prozess vs. Thread
 - Nebenläufigkeit (Concurrency) vs. echte Parallelität
@@ -65,69 +91,45 @@ Dieser Abschnitt umfasst die folgenden Inhalte:
 
 ---
 
-### Rückblick & Brücke: Wo stehen wir in der Vorlesung?
-
-In **Termin 02 bis 05** haben wir leistungsfähige 2D- und 3D-Oberflächen gebaut – warum bildet **Termin 06** heute das architektonische Scharnier zur zweiten Semesterhälfte?
-
-- **Rückblick & Erfahrung aus den bisherigen Showcases (T02–T05):**
-  - Solange Physik und Rendering gemeinsam im **WPF UI-Thread** laufen, stehen für alles zusammen bei $60\,\text{FPS}$ nur **$16{,}6\,\text{ms}$ Budget pro Frame** zur Verfügung.
-- **Der Engpass für komplexe Ingenieursmodelle (T07–T10):**
-  - Sobald wir ab nächster Woche große Gleichungssysteme (T07), hochfrequente Differentialgleichungen (T08) oder Millionen Monte-Carlo-Läufe (T09) berechnen, dauert ein Rechenschritt schnell Sekunden statt Millisekunden $\implies$ **Das WPF-Fenster friert komplett ein ("Keine Rückmeldung")**, und 15 von 16 CPU-Kernen langweilen sich!
-- **Einordnung ins große Ganze (Das Architektur-Scharnier):**
-  - Heute trennen wir **Berechnung (Worker-Threads / `Parallel.For`)** und **Visualisierung (UI-Dispatcher)** sauber voneinander – das Fundament für alle kommenden Solver in **Termin 07 bis 10**.
-
----
-
 ### Warum Multithreading in der Simulation?
 
-- Physikalische Simulationen und stochastische Verfahren (z.B. Monte-Carlo) erfordern oft Milliarden Rechenoperationen.
-- Die Taktfrequenzen einzelner CPU-Kerne stagnieren seit Jahren (Physical Scaling Wall); Leistungszuwachs erfolgt primär über **mehr Kerne**.
-- **Sequentieller Code** nutzt auf einer 16-Core-CPU nur $\approx 6{,}25\,\%$ der verfügbaren Rechenkapazität.
-- Durch Parallelisierung können unabhängige Simulationsläufe (z.B. Parameterschwankungen, Replikationen) zeitgleich auf allen Kernen berechnet werden (**"Embarrassingly Parallel"**).
+- **Physical Scaling Wall:** Die Taktfrequenzen einzelner CPU-Kerne stagnieren seit Jahren bei $\approx 3\text{–}5\,\text{GHz}$; Leistungszuwachs erfolgt primär über **mehr Kerne** (8 bis 64+ Cores).
+- **Sequentieller Leerlauf:** Ein Single-Thread-Programm nutzt auf einer 16-Core-CPU nur $\frac{1}{16} = 6{,}25\,\%$ der verfügbaren Rechenleistung – $93{,}75\,\%$ der Hardware liegen brach.
+- **Konkretes Zahlenbeispiel:** $10^7$ Monte-Carlo-Stichproben à $1\,\mu\text{s}$ dauern seriell **$10{,}0\,\text{s}$**, auf 16 Kernen parallel dagegen nur **$\approx 0{,}7\,\text{s}$**.
+- **„Embarrassingly Parallel“:** Unabhängige Läufe (Parameterstudien, Partikel, Replikationen) lassen sich ohne gegenseitige Abhängigkeit direkt auf alle Kerne verteilen.
+- **Energie & Durchsatz:** Parallele Nutzung senkt nicht nur die Wartezeit im Labor, sondern verbessert auch die Energieeffizienz pro Berechnung erheblich.
+
+> **Wann lohnt sich Multithreading?** Immer dann, wenn viele gleichartige Teilaufgaben unabhängig berechenbar sind – nicht aber bei streng sequentiellen Schrittketten ($x_{k+1} = f(x_k)$).
 
 ---
 
 ### Prozess vs. Thread
 
 <div class="columns top">
-<div class="one">
+<div class="two">
 
-**Prozess (Process)**
-- Eine isolierte Programminstanz des Betriebssystems.
-- Eigener, geschützter virtueller Adressraum.
-- Kommunikation zwischen Prozessen (IPC) erfordert Serialisierung und OS-Overhead.
+- **Prozess (.exe):** Isolierte Instanz mit eigenem **RAM / Heap**. Austausch per **Inter-Process Communication (IPC)** kostet **ms**.
+- **Thread:** Ausführungseinheit im Prozess (eigener **Stack**, gemeinsamer **Heap**).
+- **Wechselkosten:** Context-Switch in **$\mu\text{s}$**, Datenaustausch direkt im Speicher (**ns–$\mu\text{s}$**).
+- **Konsequenz für C#:** **1 Prozess** mit vielen **Threads** – maximal schnell, aber ungeschützt beim Schreiben!
 
 </div>
-<div class="one">
+<div class="two">
 
-**Thread (Leichtgewichtiger Faden)**
-- Die kleinste Ausführungseinheit innerhalb eines Prozesses.
-- Alle Threads eines Prozesses **teilen sich denselben Adressraum** (Heap, globale Variablen).
-- Schnelle Kommunikation, aber hohes Risiko für Datenkonflikte.
+![](./Diagramme/Prozess_vs_Thread.svg)
 
 </div>
 </div>
+
+> **Merksatz:** In C# arbeiten alle Hintergrund-Threads im selben Prozess-Heap – extrem schnell beim Lesen, aber kritisch beim parallelen Schreiben!
 
 ---
 
 ### Nebenläufigkeit vs. Echte Parallelität
 
-<div class="columns top">
-<div class="one">
+*Concurrency* (`async`/`await` + `Task.Run`) hält das **UI** reaktiv, während *echte Parallelität* (`Parallel.For`) alle Kerne für maximalen **Speedup $S(p)$** auslastet – idealerweise kombiniert!
 
-**Nebenläufigkeit (Concurrency)**
-- Mehrere Aufgaben sind logisch im Gange und teilen sich Rechenzeit (z.B. per Zeitscheiben-Scheduling auf 1 CPU-Kern).
-- Strukturierungsprinzip für responsive UIs und asynchrone I/O.
-
-</div>
-<div class="one">
-
-**Parallelität (True Parallelism)**
-- Mehrere Aufgaben werden **zur exakt gleichen physikalischen Zeit** auf verschiedenen CPU-Kernen ausgeführt.
-- Rechenbeschleunigung für mathematische Berechnungen und Simulationen.
-
-</div>
-</div>
+![](./Diagramme/Concurrency_vs_Parallelism.svg)
 
 ---
 
@@ -143,7 +145,7 @@ $$S(p) = \frac{T_1}{T_p}$$
 
 - $T_1$: Ausführungszeit auf $1$ CPU-Kern $[\mathrm{s}]$
 - $T_p$: Ausführungszeit auf $p$ CPU-Kernen $[\mathrm{s}]$ ($p \in \mathbb{N}^+$)
-- **Idealer Speedup (linear):** $S(p) = p$
+- **Idealer Speedup (linear):** $S(p) = p$ (ohne Synchronisations- oder Thread-Overhead)
 
 </div>
 <div class="one">
@@ -161,19 +163,80 @@ $$E(p) = \frac{S(p)}{p} = \frac{T_1}{p \cdot T_p} \le 1 \quad (100\,\%)$$
 </div>
 </div>
 
+> **Zahlenbeispiel:** Läuft eine Simulation auf 1 Kern in $T_1 = 8{,}0\,\text{s}$ und auf 4 Kernen in $T_4 = 2{,}5\,\text{s}$, beträgt der Speedup $S(4) = \frac{8{,}0}{2{,}5} = 3{,}2\times$ und die Effizienz $E(4) = \frac{3{,}2}{4} = 80\,\%$.
+
 ---
+
+<!-- _class: activity -->
+
+### Frage: Wie weit skaliert ein Supercomputer (Amdahl)?
+
+Angenommen, **$95\,\%$** einer Simulation lassen sich ideal parallelisieren – aber **$5\,\%$** (z. B. Initialisierung und Ergebnis-Zusammenführung) laufen streng seriell auf einem Kern.
+
+**Schätzen Sie (gerne auch zu zweit):** Welchen maximalen Speedup $S(1000)$ erreichen wir auf einem Cluster mit **$p = 1\,000$ Kernen**?
+
+- **A:** $\approx 950\times$ (fast linear mit den Kernen)
+- **B:** $\approx 500\times$ (etwa halbe Kernskalierung durch Overhead)
+- **C:** $\approx 20\times$ (harte Grenze durch die $5\,\%$ serielle Phase)
+- **D:** $\approx 5\times$ (Overhead frisst fast alles auf)
+
+> **Ablauf:** 60 Sek. still überlegen $\to$ gleichzeitiges Fingerzeichen (1=A, 2=B, 3=C, 4=D)!
+>
+> **Denkhilfe:** Wie lange dauert allein der serielle Teil bei $T_1 = 100\,\text{s}$ Gesamtlaufzeit, wenn der parallele Teil beliebig schnell wird?
+
+---
+
+<!-- _class: solution -->
+
+### Auflösung: Warum bei $20\times$ Schluss ist
+
+Die richtige Antwort ist **C ($\approx 20\times$)** – selbst bei unendlich vielen Kernen!
+
+- **Intuition am Zeitstrahl ($T_1 = 100\,\text{s}$):**
+  - Auf $1\,000$ Kernen schrumpft der parallele Teil ($95\,\text{s}$) auf $\frac{95}{1000} \approx 0{,}095\,\text{s}$.
+  - Der serielle Flaschenhals bleibt aber stur bei **$5\,\text{s}$**!
+  - Gesamtlaufzeit: $T_{1000} \approx 5{,}095\,\text{s} \implies S(1000) = \frac{100}{5{,}095} \approx \mathbf{19{,}6\times}$.
+- **Warum A/B falsch sind:** Selbst für $p \to \infty$ verschwinden die $5\,\text{s}$ nie ($S_{\max} = \frac{1}{s} = \frac{1}{0{,}05} = 20$).
+- **Warum D falsch ist:** Bei groben Chunks dominiert der serielle Teil, nicht der ThreadPool-Overhead.
+- **Konsequenz:** Ab einer gewissen Kernzahl bringt zusätzliche Hardware praktisch keinen Zeitgewinn mehr.
+
+> **Lehre für die Praxis:** Bevor man blind neue CPU-Kerne kauft, muss immer zuerst der serielle Anteil (z. B. I/O, `lock`-Wartezeiten) minimiert werden – sonst verpufft die Parallelisierung wirkungslos!
+>
+> **Merksatz:** Erst den seriellen Flaschenhals messen, dann parallelisieren!
+
+---
+
+### Amdahlsches Gesetz & Skalierungsgrenzen
+
+<div class="columns top">
+<div class="two">
+
+Bei konstanter Problemgröße begrenzt der serielle Anteil $s = 1 - f_{\text{par}}$ (z. B. `lock` / `Interlocked`) den Speedup $S(p)$:
+
+$$S(p) = \frac{1}{s + \frac{1 - s}{p}}, \qquad S_{\max} = \lim_{p \to \infty} S(p) = \frac{1}{s}$$
+
+- **Zahlenbeispiel ($s = 5\,\%$):** Bei $p = 64$ Kernen erreicht man nur $15{,}4\times$ statt $64\times$, und selbst für $p \to \infty$ bleibt die Grenze bei **$S_{\max} = 20$**!
+- **Gegenstück (*Weak Scaling*):** Wächst die Problemgröße mit $p$ (*Gustafson*), skaliert die Simulation nahezu linear.
+
+</div>
+<div class="three">
 
 ![](./Diagramme/Amdahlsches_Gesetz_Speedup.svg)
 
+</div>
+</div>
+
 ---
 
-## 6.2: Task Parallel Library (`Parallel.For` & `Parallel.ForEach`)
+## 6.2: Task Parallel Library (`Parallel.For` & `ConcurrentBag<T>`)
+
+![bg](./Illustrationen/Abschnitt_2.jpg)
 
 Dieser Abschnitt umfasst die folgenden Inhalte:
 
-- Die Task Parallel Library (TPL) in .NET
-- Parallelisierung von Zählschleifen mit `Parallel.For`
-- Partitionierung und Lastverteilung durch den ThreadPool
+- Die Task Parallel Library (TPL) in .NET (`Parallel.For`)
+- Granularität, `ParallelOptions` & Just-in-Time-Warmup (JIT) für saubere Benchmarks
+- Threadsichere Ergebnissammlung ohne Sperren (`ConcurrentBag<T>`)
 
 ---
 
@@ -209,15 +272,45 @@ Parallel.For(0, 100, i =>
 </div>
 </div>
 
+> **Was die TPL automatisch übernimmt:** Der `ThreadPool` vermeidet Thread-Neuerstellungen und gleicht Last per *Work-Stealing* aus.
+
 ---
 
-## 6.3: Threadsichere Datenstrukturen (`ConcurrentBag<T>`)
+### Granularität, `ParallelOptions` & JIT-Warmup
 
-Dieser Abschnitt umfasst die folgenden Inhalte:
+In realen Simulationen steuern wir die TPL gezielt über `ParallelOptions` – und achten auf zwei typische Performance-Fallen:
 
-- Das Problem ungeschützter Collections (`List<T>`)
-- Datenkorruption bei gleichzeitigem Schreibzugriff
-- Threadsichere Alternativen aus `System.Collections.Concurrent`
+<div class="columns top">
+<div class="one">
+
+**Steuerung per `ParallelOptions`:**
+```csharp
+var opts = new ParallelOptions
+{
+    MaxDegreeOfParallelism = p,
+    CancellationToken = token
+};
+Parallel.For(0, n, opts, i => Step(i));
+```
+- Das Objekt `opts` begrenzt die Thread-Anzahl `p` für Skalierungsreihen ($1 \dots P_{\max}$) und leitet den Abbruch (`token`) direkt an die Worker weiter.
+
+</div>
+<div class="one">
+
+**Granularität & JIT-Warmup:**
+- **Zu feine Arbeitspakete:** Dauert `Step(i)` nur wenige Nanosekunden, übersteigt der ThreadPool-Overhead den Rechengewinn ($S(p) < 1$) $\implies$ innere Schleifen *niemals* blind parallelisieren!
+- **JIT-Warmup:** Der erste Aufruf in .NET kompiliert Zwischencode (Intermediate Language, IL) in Maschinencode. Vor jeder Zeitmessung (`Stopwatch`) einmal ungezählt warmlaufen lassen!
+
+</div>
+</div>
+
+---
+
+### Blick unter die Haube: Chunk-Partitionierung & Granularität
+
+Ist eine Iteration zu fein, frisst ThreadPool-Overhead (Rot) die Nutzarbeit (Blau) auf – grobe Range-Chunks (z. B. $25\,000$ Partikel, gesteuert über `MaxDegreeOfParallelism`) liefern $S(4) \approx 3{,}8\times$ ($95\,\%$ Effizienz)!
+
+![](./Diagramme/TPL_Chunk_Granularitaet.svg)
 
 ---
 
@@ -225,7 +318,7 @@ Dieser Abschnitt umfasst die folgenden Inhalte:
 
 Wenn mehrere Threads gleichzeitig auf eine Standard-Collection wie `List<T>` schreibend zugreifen, führt dies unweigerlich zu Ausnahmen oder unbemerktem Datenverlust.
 
-- **`ConcurrentBag<T>`** ist eine threadsichere, ungeordnete Sammlung für Szenarien, bei denen die Reihenfolge der Ergebnisse unwichtig ist.
+- **`ConcurrentBag<T>`** (z. B. Instanz `bag`) ist eine threadsichere, ungeordnete Sammlung für Szenarien, bei denen die Reihenfolge der Ergebnisse unwichtig ist.
 - Erlaubt paralleles Hinzufügen ohne manuelle Sperren.
 
 <div class="columns">
@@ -261,13 +354,16 @@ Parallel.For(0, 1000, i =>
 
 ---
 
-## 6.4: Synchronisation & Race Conditions (`lock`)
+## 6.3: Synchronisation, Cache-Effizienz & Zufallszahlen
+
+![bg](./Illustrationen/Abschnitt_3.jpg)
 
 Dieser Abschnitt umfasst die folgenden Inhalte:
 
-- Was ist eine Race Condition?
-- Nicht-atomare Operationen (z.B. `counter++`)
-- Das `lock`-Statement und gegenseitiger Ausschluss (Mutual Exclusion)
+- Race Conditions (`counter++` vs. `lock` / `Interlocked`)
+- *False Sharing* auf 64-Byte-Cache-Lines & thread-lokale Reduktion
+- Sperrfreie Datenparallelität durch Double-Buffering (`StateCurrent` $\to$ `StateNext`)
+- Thread-sichere Zufallszahlen (`Random.Shared` & deterministische Seeds)
 
 ---
 
@@ -275,9 +371,52 @@ Dieser Abschnitt umfasst die folgenden Inhalte:
 
 Eine **Race Condition** (Wettlaufsituation) tritt auf, wenn mehrere Threads gleichzeitig auf geteilte Daten zugreifen und mindestens ein Thread schreibend zugreift:
 
-- Das Endergebnis hängt von der unvorhersehbaren Reihenfolge des Betriebssystem-Schedulers ab.
-- **Konsequenzen:** Sporadische Fehler, falsche Simulationsergebnisse, extrem schwer reproduzierbare Bugs.
-- Schon einfache Operationen wie `counter++` sind in Maschinensprache **drei Einzelschritte** (Read-Modify-Write) und können jederzeit unterbrochen werden!
+- Das Endergebnis hängt von der unvorhersehbaren Ausführungsreihenfolge des Betriebssystem-Schedulers ab (**sporadische, kaum reproduzierbare Bugs**).
+- Schon `counter++` ist in Maschinensprache **kein atomarer Befehl**, sondern eine 3-Schritt-Sequenz (**Read-Modify-Write**):
+  1. **Read:** Thread A und Thread B lesen beide gleichzeitig den alten Wert `counter = 42` in ihr CPU-Register.
+  2. **Modify:** Beide Threads addieren lokal $+1$ und erhalten jeweils `43`.
+  3. **Write:** Beide schreiben `43` zurück in den RAM $\implies$ **1 Inkrement geht dauerhaft verloren (*Lost Update*, `43` statt `44`)!**
+- **Folge in der Praxis:** Bei $10\,000$ parallelen Inkrementen fehlen am Ende zufällig $1\,000$ bis $3\,000$ Zählwerte.
+
+---
+
+<!-- _class: activity -->
+
+### Frage: Was gibt `counter` nach paralleler Ausführung aus?
+
+Betrachten Sie diese kurze parallele Schleife auf einem 8-Kern-Rechner:
+
+```csharp
+int counter = 0;
+Parallel.For(0, 10000, _ =>
+{
+    counter++;
+});
+Console.WriteLine(counter);
+```
+
+- **A:** Exakt `10000` (der Compiler schützt `int` automatisch)
+- **B:** Einen Wert **größer** als `10000`
+- **C:** Bei jedem Start einen anderen Wert **kleiner** als `10000` (z. B. `7842`)
+- **D:** Einen Laufzeitfehler (`InvalidOperationException`)
+
+> **Ablauf:** 60 Sek. selbst überlegen (gerne auch zu zweit) $\to$ Fingerzeichen (1=A, 2=B, 3=C, 4=D)!
+
+---
+
+<!-- _class: solution -->
+
+### Auflösung: *Lost Updates* liefern zufällige Werte $< 10\,000$
+
+Die richtige Antwort ist **C** (z. B. `7842`, bei jedem Start ein anderes Ergebnis)!
+
+- **Warum?** `counter++` ist nicht atomar, sondern besteht aus *Read (`42`) $\to$ Modify (`43`) $\to$ Write (`43`)*.
+- Wenn mehrere Threads denselben alten Wert lesen, überschreiben sie sich gegenseitig (*Lost Update*) – es geht Zählwert verloren, **ohne** dass C# eine Exception wirft!
+- **Warum A/D falsch sind:** Der Compiler schützt `int` nicht automatisch; nur Exceptions (z. B. bei `List<T>`) würden crashen – ein einzelnes `int` überschreibt sich still.
+- **Besonders tückisch:** Auf einem einzelnen Kern (oder mit Breakpoints) tritt der Fehler gar nicht auf.
+- **Saubere Korrektur:** `Interlocked.Increment(ref counter);` statt `counter++;` nutzen (oder thread-lokal summieren).
+
+> **Merksatz:** Ein stiller, nicht-reproduzierbarer Zahlenfehler ist im Ingenieurwesen gefährlicher als ein sofortiger Absturz!
 
 ---
 
@@ -323,15 +462,50 @@ Console.WriteLine(counter);
 </div>
 </div>
 
+> **Faustregel:** Für einzelne Zähler `Interlocked` nutzen (lock-frei); `lock (_sync)` nur für mehrzeilige Blöcke – niemals auf `this` sperren!
+
 ---
 
-## 6.5: Parallele Zufallszahlen & thread-lokale Zustände
+### Blick unter die Haube: False Sharing & Thread-lokale Reduktion
 
-Dieser Abschnitt umfasst die folgenden Inhalte:
+Schreiben zwei Kerne in dieselbe **64-Byte-Cache-Line** (`localSum[0]`/`[1]`), bremst Cache-Ping-Pong $\to$ `local` + `Interlocked.Add(ref totalCount, local)` ([Anhang A](./Folien_Anhang_A_TPL_und_Hardware_Details.md))!
 
-- Gefahren geteilter Zufallsgeneratoren (`System.Random`)
-- Reproduzierbarkeit und Seed-Management
-- Thread-lokale Instanziierung
+![](./Diagramme/False_Sharing_und_Reduktion.svg)
+
+---
+
+### Datenparallelität ohne Sperren: Double-Buffering
+
+Wenn Partikel oder Agenten in einem Zeitschritt die Positionen anderer Agenten **lesen** und gleichzeitig ihre eigene Position **schreiben**, führt ein einzelnes Array zu **Race Conditions (Tearing)**:
+
+<div class="columns top">
+<div class="one">
+
+**Das Prinzip (Read/Write-Trennung):**
+- Zwei getrennte Puffer: `StateCurrent[]` *(nur lesen)* und `StateNext[]` *(nur schreiben)*.
+- Jeder Thread `i` schreibt exklusiv mit `opts` in `StateNext[i]` $\implies$ **0 Locks, 0 False Sharing!**
+- Nach `Parallel.For` werden die Referenzen in $\mathcal{O}(1)$ getauscht (`Swap`).
+
+</div>
+<div class="one">
+
+```csharp
+var opts = new ParallelOptions();
+// 1. Parallele Berechnung (strikt getrennt)
+Parallel.For(0, count, opts, i =>
+{
+    var p = StateCurrent[i]; // nur lesen
+    StateNext[i] = Integrate(p, StateCurrent);
+});
+
+// 2. Nach dem Schritt: O(1)-Referenztausch
+(StateCurrent, StateNext) = (StateNext, StateCurrent);
+```
+
+</div>
+</div>
+
+> **Tausch-Prinzip:** Lesen aus `StateCurrent[]` und Schreiben in `StateNext[]` bleiben innerhalb jedes Zeitschritts strikt getrennt.
 
 ---
 
@@ -353,17 +527,19 @@ Parallel.For(0, numberOfRuns, i =>
 });
 ```
 
+> **Varianten:** `Random.Shared` für interaktive Apps; `new Random(seed)` pro Lauf für reproduzierbare Tests!
+
 ---
 
-## 6.6: Multithreading in WPF-Anwendungen
+## 6.4: Asynchrone WPF-Entkopplung (`Task.Run` & Architektur)
+
+![bg](./Illustrationen/Abschnitt_4.jpg)
 
 Dieser Abschnitt umfasst die folgenden Inhalte:
 
 - Das Problem des blockierten UI-Threads (UI-Freeze)
 - Asynchrone Ausführung mit `async`/`await` und `Task.Run`
-- Zusammenspiel von UI-Thread und Hintergrund-Worker (Architektur)
-- Thread-sichere UI-Aktualisierung: `IProgress<T>` vs. `Dispatcher.Invoke`
-- Kooperativer Abbruch mit `CancellationTokenSource`
+- Zusammenspiel von UI-Thread und Hintergrund-Worker (Architektur & Datenfluss)
 
 ---
 
@@ -379,7 +555,7 @@ WPF-Anwendungen basieren auf einem **Single-Threaded Apartment (STA)**:
 **Symptome des UI-Freeze:**
 - Fenster reagiert nicht mehr ("Keine Rückmeldung")
 - Animationen und Fortschrittsbalken frieren ein
-- Abbruch über die GUI unmöglich
+- Abbruch über die GUI unmöglich (auch kein Tooltip/Scrollen)
 
 </div>
 <div class="one">
@@ -396,17 +572,19 @@ WPF-Anwendungen basieren auf einem **Single-Threaded Apartment (STA)**:
 
 ### Asynchrone Ausführung: `async`/`await` & `Task.Run`
 
-Mit `async`/`await` und `Task.Run` wird die Simulation im Hintergrund berechnet, ohne das UI zu blockieren:
+Mit `async`/`await` und `Task.Run` wird das Simulationsergebnis (`res`) im Hintergrund berechnet, ohne das UI zu blockieren:
 
 <div class="columns top">
 <div class="one">
 
 **Blockierend (UI friert ein):**
 ```csharp
-private void Start_Click(
-    object sender, RoutedEventArgs e)
+private void Start_Click(object sender, RoutedEventArgs e)
 {
-    // Blockiert UI-Thread!
+    // Blockiert UI-Thread komplett!
+    // Keine Maus-/Tastatur-Events mehr
+    // Fortschrittsbalken steht still
+    // Abbruch-Button bleibt tot
     var res = RunSimulation();
     ResultText.Text = $"Wert: {res}";
 }
@@ -417,16 +595,14 @@ private void Start_Click(
 
 **Asynchron (UI bleibt reaktiv):**
 ```csharp
-private async void Start_Click(
-    object sender, RoutedEventArgs e)
+private async void Start_Click(object sender, RoutedEventArgs e)
 {
     StartBtn.IsEnabled = false;
 
     // Auf ThreadPool auslagern
-    var res = await Task.Run(
-        () => RunSimulation());
+    var res = await Task.Run(() => RunSimulation());
 
-    // Rückkehr auf UI-Thread!
+    // Automatisch zurück auf UI-Thread
     ResultText.Text = $"Wert: {res}";
     StartBtn.IsEnabled = true;
 }
@@ -434,6 +610,8 @@ private async void Start_Click(
 
 </div>
 </div>
+
+> **Wichtig:** `async void` nur bei UI-Events; `StartBtn` deaktivieren (Doppelklick-Schutz)!
 
 ---
 
@@ -446,6 +624,8 @@ Die Entkopplung von Simulation und Benutzeroberfläche erfordert eine klare Thre
 - **`IProgress<T>`:** Ermöglicht thread-sicheres Reporting von Zwischenständen via automatischem `SynchronizationContext`-Marshalling.
 - **`CancellationToken`:** Erlaubt den sofortigen, geordneten Abbruch laufender Berechnungen aus der Benutzeroberfläche heraus.
 
+> **Klare Aufgabenverteilung:** Im **UI-Thread** laufen ausschließlich Event-Handler, `ProgressBar`, `DataGrid` und `WriteableBitmap.WritePixels` – alle rechenintensiven `Parallel.For`-Schleifen und `Stopwatch`-Messungen laufen im **Worker-Thread**.
+
 ---
 
 ### Signal- & Datenfluss: UI & Hintergrund-Worker
@@ -456,27 +636,62 @@ Die Entkopplung von Simulation und Benutzeroberfläche erfordert eine klare Thre
 
 ---
 
+<!-- _class: activity -->
+
+### Aufgabe: Zwei Synchronisationsfehler im WPF-Worker finden
+
+Ein Team schreibt für seine WPF-Simulation diesen Hintergrund-Worker – **welche 2 kritischen Bugs** stecken in diesen Zeilen?
+
+```csharp
+var rnd = new Random(42);
+await Task.Run(() =>
+{
+    Parallel.For(0, 1000, i =>
+    {
+        double x = rnd.NextDouble();
+        ProgressBar.Value = i / 10.0;
+    });
+});
+```
+
+> **Aufgabe:** 60 Sek. selbst analysieren (gerne auch zu zweit) – benennen Sie beide Fehler, das konkrete Fehlerbild **und** die jeweilige Lösung!
+> **Hinweis:** Achten Sie besonders auf den Lebenszyklus der Objekte *vor* und *innerhalb* der Worker-Schleife!
+
+---
+
+<!-- _class: solution -->
+
+### Auflösung: Die 2 klassischen Parallel-Fallen
+
+1. **Bug 1 (`var rnd = new Random(42)` außerhalb `Parallel.For`):**
+   - `System.Random` ist **nicht thread-sicher** – der interne Zustand korrumpiert und liefert nach kurzer Zeit nur noch `0.0`.
+   - *Lösung:* `Random.Shared.NextDouble()` oder eine eigene Instanz mit eindeutigem Seed pro Lauf.
+2. **Bug 2 (`ProgressBar.Value = ...` innerhalb `Task.Run`):**
+   - Direkter Zugriff aus einem Hintergrund-Thread auf WPF-Controls wirft sofort eine **`InvalidOperationException`** (Thread-Affinität).
+   - *Lösung:* Gedrosselt über **`IProgress<T>` (`progress.Report(...)`)** an den UI-Thread melden!
+3. **Konsequenz:** Beide Fehler treten erst bei echter Parallelität bzw. im WPF-UI-Kontext auf und bleiben in einfachen 1-Thread-Tests leicht unentdeckt.
+
+> **Merksatz für Stufe 1:** Kein `Random` teilen, kein WPF-Control direkt aus `Task.Run` anfassen – und Fortschrittsmeldungen immer drosseln!
+
+---
+
+## 6.5: Fortschritt & Abbruch (`IProgress<T>` & `CancellationToken`)
+
+![bg](./Illustrationen/Abschnitt_5.jpg)
+
+Dieser Abschnitt umfasst die folgenden Inhalte:
+
+- Thread-sichere UI-Aktualisierung: `IProgress<T>` vs. `Dispatcher.Invoke`
+- Code-Beispiel: Gedrosselte Fortschrittsmeldung mit `Progress<T>`
+- Kooperativer Abbruch langer Simulationen mit `CancellationTokenSource`
+
+---
+
 ### Thread-sichere UI-Aktualisierung: `IProgress<T>`
 
-Der Hintergrund-Worker darf **nicht** direkt auf UI-Elemente zugreifen (`InvalidOperationException: Der aufrufende Thread kann nicht auf dieses Objekt zugreifen...`).
+`Dispatcher.Invoke` blockiert den Worker synchron (und koppelt an WPF), während `IProgress<T>` mit `Progress<T>` und gedrosseltem `progress.Report(...)` asynchron über den `SynchronizationContext` in den UI-Thread marshallt:
 
-<div class="columns top">
-<div class="one">
-
-**Warum kein unbedachtes `Dispatcher.Invoke`?**
-- `Dispatcher.Invoke` blockiert den Worker synchron bis das UI zeichnet $\to$ Performanceverlust & Deadlock-Gefahr.
-- Koppelt die Simulationslogik fest an WPF-Klassen (keine Wiederverwendbarkeit in CLI/Tests).
-
-</div>
-<div class="one">
-
-**Best Practice: `IProgress<T>` & `Progress<T>`**
-- `Progress<T>` erfasst bei Instanziierung den `SynchronizationContext` des UI-Threads.
-- `progress.Report(...)` ist nicht-blockierend und ruft den Callback automatisch im UI-Thread auf.
-- Simulationslogik bleibt unabhängig von WPF!
-
-</div>
-</div>
+![](./Diagramme/IProgress_vs_Dispatcher_Kontrast.svg)
 
 ---
 
@@ -528,6 +743,8 @@ public void RunSimulation(
 </div>
 </div>
 
+> **Vorteil & Drosselung:** `RunSimulation` ist WPF-frei testbar (`progress: null`); `i % 50 == 0` schützt die UI-Queue vor Überflutung!
+
 ---
 
 ### Abbrechen langer Simulationen: `CancellationToken`
@@ -540,9 +757,10 @@ Lange Simulationen müssen vom Benutzer vorzeitig gestoppt werden können:
 <div class="one">
 
 **Rolle der `CancellationTokenSource`**
-- Wird im UI-Thread erzeugt und verwaltet.
-- `cts.Cancel()` signalisiert allen assoziierten Tokens den Abbruchwunsch.
-- Kann bei Bedarf auch ein Zeitlimit definieren (`CancelAfter(timeout)`).
+- Wird im UI-Thread erzeugt & verwaltet.
+- `cts.Cancel()` signalisiert allen Tokens den Abbruchwunsch.
+- Optionales Zeitlimit (`CancelAfter(timeout)`).
+- Verbindet den Stop-Button der GUI direkt mit dem Worker.
 
 </div>
 <div class="one">
@@ -561,21 +779,21 @@ Lange Simulationen müssen vom Benutzer vorzeitig gestoppt werden können:
 
 ### Code-Beispiel: Kooperativer Abbruch mit `CancellationToken`
 
+Übergabe des Absender-Parameters `s` und des `CancellationToken` zwischen UI-Schicht und Hintergrundschleife:
+
 <div class="columns top">
 <div class="one">
 
 **UI-Ereignisbehandlung & Abbruch:**
 ```csharp
 private CancellationTokenSource _cts;
-
 private async void Start_Click(object s, RoutedEventArgs e)
 {
     _cts = new CancellationTokenSource();
     CancelBtn.IsEnabled = true;
-    try
-    {
+    try {
         await Task.Run(() => Simulate(_cts.Token), _cts.Token);
-        Status.Text = "Fertiggestellt.";
+        Status.Text = "Fertig.";
     }
     catch (OperationCanceledException) { Status.Text = "Abbruch."; }
     finally { CancelBtn.IsEnabled = false; }
@@ -604,52 +822,61 @@ public void Simulate(CancellationToken token)
 </div>
 </div>
 
+> **Aufräumen im `finally`-Block:** `CancelBtn.IsEnabled = false` & `_cts?.Dispose()`; in `Parallel.For` via `ParallelOptions` durchreichen.
+
 ---
+
+<!-- _class: summary -->
 
 # Zusammenfassung Kapitel 6
 
 - Multithreading ist der Schlüssel zur vollen Auslastung moderner Mehrkern-CPUs bei rechenintensiven Simulationen.
 - Die **Task Parallel Library (TPL)** mit `Parallel.For` abstrahiert das manuelle Thread-Management.
-- **Race Conditions** entstehen beim gleichzeitigen Schreiben auf geteilte Ressourcen; sie lassen sich durch `lock` (gegenseitigen Ausschluss) verhindern.
+- **Race Conditions** entstehen beim gleichzeitigen Schreiben auf geteilte Ressourcen; sie lassen sich durch `lock`, atomares `Interlocked`, thread-lokale Reduktion (gegen *False Sharing*) oder **Double-Buffering** verhindern.
 - **`ConcurrentBag<T>`** bietet eine threadsichere Lösung zum Sammeln paralleler Simulationsergebnisse.
 - Zufallszahlengeneratoren (`System.Random`) müssen strikt thread-lokal und mit individuellem Seed betrieben werden, um Korruption zu vermeiden und Reproduzierbarkeit zu wahren.
 - In **WPF-Anwendungen** entkoppelt `await Task.Run(...)` die Simulation vom UI-Thread; **`IProgress<T>`** garantiert thread-sichere Zwischenstände und **`CancellationToken`** ermöglicht den kontrollierten Benutzerabbruch.
 
 ---
 
-### Kursdramaturgie: Übergang zum Modellierungsblock
+<!-- _class: appendix -->
 
-<div class="columns top">
-<div class="one">
+### Vertiefung im Selbststudium: Anhang A (TPL-Interna & Hardware)
 
-**Was wir bisher gelernt haben (Werkzeuge):**
-- **Kapitel 01:** Einführung & Begriffswelt des Digitalen Zwillings
-- **Kapitel 02–04:** 2D-Rendering (Pixel-Heatmaps, Vektoren, Diagramme)
-- **Kapitel 05:** 3D-Szenengraphen & Hardware-Rendering mit OpenGL
-- **Kapitel 06:** Parallele Rechenleistung & reaktive UI-Entkopplung
+Für alle, die unter die Haube von **`.NET`-ThreadPool und CPU-Hardware** schauen wollen ([Anhang A](./Folien_Anhang_A_TPL_und_Hardware_Details.md)):
 
-*Die Software- und Visualisierungs-Infrastruktur steht vollständig bereit.*
+<div class="columns">
+<div class="two">
+
+- **Cache-Kohärenz (MESI):** Warum 64-Byte-Cache-Lines zu Ping-Pong führen – und wie `[StructLayout(Size = 64)]` sowie `localInit`/`localFinally` das verhindern.
+- **TPL-Interna:** Lokale **Last-In-First-Out-Queues (LIFO)**, *Work-Stealing*, adaptives *Hill-Climbing* und `Partitioner.Create` für ungleichmäßige Lasten.
+- **Lock-freie Atomics & Backpressure:** `Interlocked.CompareExchange` (CAS) für Gleitkommawerte und `Channel<T>` mit `DropOldest` als Telemetrie-Brücke.
 
 </div>
-<div class="one">
+<div class="two">
 
-**Was nun folgt (Physikalische Simulation):**
-- **Kapitel 07:** Statische Gleichgewichtsmodelle & FEM-Fachwerke (LGS)
-- **Kapitel 08:** Kontinuierliche Dynamik & Schwingungssysteme (DGL / ODE)
-- **Kapitel 09:** Diskrete Ereignissysteme & Warteschlangen (DES / MC)
-- **Kapitel 10:** Hybride Dynamik & Co-Simulation (S-Functions)
-- **Kapitel 11:** Epilog: Synthese zum industriellen Digitalen Zwilling
-
-*Ab Kapitel 07 hauchen wir den Grafiken physikalisches Leben ein!*
+![](./Diagramme/TPL_Work_Stealing_und_Channel.svg)
 
 </div>
 </div>
 
 ---
 
+<!-- _class: outlook -->
+
+### Ausblick: Übergang zum Modellierungsblock (T07–T10)
+
+Die Software- und Visualisierungs-Infrastruktur (**Block 1: T01–T06**) steht vollständig – ab **Termin 07** hauchen wir den Grafiken physikalisches Leben ein!
+
+![](./Diagramme/Kursdramaturgie_Uebergang.svg)
+
+---
+
+<!-- _class: homework -->
+
 ### Hausübung Termin 06: Multithreading & TPL
 
-**Stufe 1 (Basisaufgabe `1.1`–`1.3` für alle Teams auf `MultithreadingBenchmark.sln`):** `Task.Run`, `IProgress<T>`, `CancellationToken` & Amdahl-Reihe ([Aufgabenblatt 06](../Uebung/Aufgabenblatt.md)) $\to$ **Stufe 2 (Vertiefung – Wahl: Track A ODER Track B, 10 Pkt.):**
+**Stufe 1 (Basisaufgabe `1.1`–`1.4` für alle Teams auf `MultithreadingBenchmark.sln`):** `Task.Run`, `IProgress<T>`, `CancellationToken`, Amdahl-Reihe & `dotnet test` ([Aufgabenblatt 06](../Uebung/Aufgabenblatt.md)) $\to$ **Stufe 2 (Vertiefung – Wahl: Track A ODER Track B, 10 Pkt.):**
 
 <div class="columns">
 <div class="two">

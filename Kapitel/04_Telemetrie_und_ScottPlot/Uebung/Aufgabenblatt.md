@@ -3,16 +3,20 @@
 **Lehrveranstaltung:** Systemsimulation / Digitaler Zwilling  
 **Studiengang:** B.Sc. Automatisierungstechnik, 5. Semester  
 **Institution:** Fachhochschule Oberösterreich – Campus Wels  
-**Bearbeitungsform:** Zweistufige Hausübung im festen 2er-Team (1 Woche):
-- **Stufe 1 (Basisaufgabe):** Gemeinsames Fundament auf der C#-Vorlage (Richtwert ca. 60 Min. zu Hause)
-- **Stufe 2 (Vertiefungsaufgabe / Track-Ausbau):** Wahlmodell Track A (Industrie) **ODER** Track B (Simulation Game) (Richtwert ca. 3–4 h zu Hause)
-**Technologie-Vorgabe:** C# 12 / .NET 8 oder .NET 10, WPF mit `ScottPlot.WPF` (Version 5.x) und `Microsoft.Msagl.WpfGraphControl`.  
-> [!CAUTION]
-> **Vorgreif-Sperre & API-Versions-Sperre für Termin 04:**  
-> - Es ist zwingend **ScottPlot Version 5** einzusetzen! Die veraltete ScottPlot-4-Syntax (`AddSignal`, alter Achsenzugriff) ist unzulässig.
-> - **KEIN** SharpGL 3D, **KEIN** Multithreading-Solver (`Parallel.For`), **KEINE** S-Functions! Die Datengenerierung erfolgt timergesteuert über vorallokierte Puffer.
+**Bearbeitungsform:** Zweistufige Hausübung im 2er-Team (1 Woche)
 
----
+| Stufe | Richtwert | Thema / Inhalt |
+| :--- | :--- | :--- |
+| **Stufe 1 (Basisaufgabe)** | ca. 60 Min. | GC-Leak-Fix, `CircularBuffer<double>` & `WelfordStatistics` auf `ScottPlotTelemetry.sln` (`1.1`–`1.4`) |
+| **Stufe 2 – Track A (Industrie)** | ca. 3–4 h *(Wahl)* | Industrieller Antriebsprüfstand & Schwingungs-Leitstand |
+| **Stufe 2 – Track B (Simulation Game)** | ca. 3–4 h *(Wahl)* | Retro Arcade Racing HUD & G-Force Telemetrie |
+
+> [!IMPORTANT]
+> **Technische Rahmenbedingungen**
+> - **Plattform & Projekt:** C# 12 / .NET 8 oder .NET 10, bereitgestellte WPF-Projektmappe (ohne zusätzliche NuGet-Pakete)
+> - **Zugelassene APIs:** `ScottPlot.WPF` (Version 5.x), `Microsoft.Msagl.WpfGraphControl`
+> - **Abgrenzung:** Single-threaded mit Timer-Steuerung auf vorallokierten Puffern; keine veraltete ScottPlot-4-Syntax (`AddSignal`)
+
 
 ## 1. Lernziele (Intended Learning Outcomes - ILOs)
 
@@ -23,7 +27,6 @@ Nach erfolgreicher Bearbeitung dieses Aufgabenblattes können Sie:
 4. **Mehrkanal-Dashboard & Phasenplots:** Zeitreihen, Streudiagramme (Phasenraum) und dynamische Histogramme synchron in einem übersichtlichen Leitstand anordnen.
 5. **Topologische Systemgraphen mit MSAGL:** Anlagenstrukturen und Messketten als gerichtete Graphen visualisieren und interaktiv mit Messwerten annotieren.
 
----
 
 ## 2. Mathematische Grundlagen
 
@@ -44,7 +47,6 @@ B. P. Welford formulierte eine numerisch exzellent konditionierte Rekursionsform
    $$y_{\text{upper}} = \bar{x}_k + 3 \sigma_k, \qquad y_{\text{lower}} = \bar{x}_k - 3 \sigma_k$$
    Nach der Drei-Sigma-Regel liegen bei Normalverteilung 99,73 % aller Messpunkte innerhalb dieses Bandes. Ausreißer jenseits dieser Grenze indizieren Anlagen-Anomalien.
 
----
 
 ## 3. Stufe 1: Basisaufgabe (Gemeinsames Fundament auf der C#-Vorlage, Richtwert ca. 60 Min.)
 
@@ -53,43 +55,41 @@ Die Vorlage enthält bereits die Klassen `CircularBuffer<T>` und `WelfordStatist
 **Ziel der Basisaufgabe (Stufe 1):** Decken Sie einen versteckten Garbage-Collection-Bug im 50-Hz-Timer-Loop auf, werten Sie das gleitende Zeitfenster des Ringpuffers aus und erweitern Sie den Plot um einen entprellten Anomalie-Detektor sowie einen zweiten Signalkanal!
 
 ### Aufgabenstellung (auf Basis von `Vorlage/ScottPlotTelemetry.sln`):
-1. **Aufgabe 1.1 – GC-Leak-Jagd & Fix im 50-Hz-Streaming-Loop (`MainWindow.xaml.cs`):**
-   - Starten Sie `ScottPlotTelemetry` und führen Sie die bestehenden Unit-Tests (`dotnet test`) aus (beachten Sie insbesondere `Test_Welford_CatastrophicCancellation_Resistance` mit Offset $10^9$).
-   - **Code-Audit in `OnTelemetryTick`:** Obwohl die Statusleiste *„0 Byte GC-Streaming“* verspricht, werden in `OnTelemetryTick` (bei der Farbzuweisung von `StatusBadge.Background` und `TxtStatusBadge.Foreground`) 50 Mal pro Sekunde neue `new SolidColorBrush(Color.FromRgb(...))`-Objekte auf dem Managed Heap allokiert!
-   - **Ihr Fix:** Legen Sie die benötigten `SolidColorBrush`-Instanzen einmalig als `private static readonly SolidColorBrush` Felder an, rufen Sie im statischen Konstruktor `.Freeze()` darauf auf und verwenden Sie im Timer-Tick ausschließlich diese vorallokierten Referenzen.
-2. **Aufgabe 1.2 – Gleitende Fenster-Auswertung mit `CircularBuffer<double>` (`MainWindow.xaml.cs`):**
-   - Aktuell wird in `OnTelemetryTick` zwar `_buffer.Add(signal)` aufgerufen, die im Ringpuffer gespeicherten letzten 500 Messwerte ($10\,\text{s}$ Historie) werden aber noch nirgends ausgewertet.
-   - Legen Sie ein vorallokiertes Puffer-Array `private readonly double[] _windowCopy = new double[BufferCapacity];` an (kein `new` im Timer-Tick!).
-   - Kopieren Sie in `OnTelemetryTick` den Ringpuffer via `_buffer.CopyTo(_windowCopy)` und berechnen Sie in einer einfachen `for`-Schleife (bis `_buffer.Count`) den **gleitenden Fenster-Mittelwert** sowie **Fenster-Min/Max** der letzten 10 Sekunden. Geben Sie diese Werte in der Statusleiste (`TxtFooter`) im Vergleich zum globalen Langzeit-Welford-Mittelwert aus.
-3. **Aufgabe 1.3 – Entprellte Anomalie-Erkennung & 2. Signalkanal (Sollwert-Spur):**
-   - **Anomalie-Zähler & Entprellung:** Erweitern Sie die Anomalie-Überwachung um einen Gesamtzähler `_anomalyCount` sowie eine Haltezeit von 25 Ticks ($0{,}5\,\text{s}$), damit ein kurzer Ausreißer-Peak im UI-Badge sichtbar bleibt und gezählt wird.
-   - **Zweiter Kanal im `WpfPlot`:** Fügen Sie einen zweiten `DataStreamer` (`_referenceStreamer = Plot1.Plot.Add.DataStreamer(BufferCapacity)`) in grüner oder oranger Farbe hinzu, der das ungestörte ideale Referenzsignal $y_{\text{ref}}(t) = 100 + 15 \cdot \sin(2\pi \cdot 0{,}5 \cdot t)$ synchron zum verrauschten Messsignal plottet.
-- **Erwartetes Ergebnis:** Ein zweikanaliger 50-Hz-Echtzeit-Leitstand mit 0 Byte Heap-Allokation im Render-Loop, gleitender 10-Sekunden-Fensterstatistik und entprellter $3\sigma$-Anomalie-Anzeige.
+**Vorbereitung – Starter-Kit untersuchen (`Vorlage/ScottPlotTelemetry.sln`):**
+- Öffnen Sie die Solution `Vorlage/ScottPlotTelemetry.sln`, führen Sie zur Kontrolle die bestehenden Unit-Tests aus (`dotnet test`) und untersuchen Sie das Zusammenspiel aus `CircularBuffer.cs`, `WelfordStatistics.cs` und der 50-Hz-Timer-Schleife in `MainWindow.xaml.cs` (beachten Sie insbesondere `Test_Welford_CatastrophicCancellation_Resistance` mit Offset $10^9$).
 
----
+1. **Aufgabe 1.1 – GC-Leak-Jagd & Fix im 50-Hz-Streaming-Loop (`MainWindow.xaml.cs`):**
+   - **Code-Audit in `OnTelemetryTick` & `BtnReset_Click`:** Obwohl die Statusleiste *„0 Byte GC-Streaming“* verspricht, werden in `OnTelemetryTick` (bei der Farbzuweisung von `StatusBadge.Background` und `TxtStatusBadge.Foreground`) 50 Mal pro Sekunde je zwei neue `new SolidColorBrush(Color.FromRgb(...))`-Objekte auf dem Managed Heap allokiert ($100$ Objekt-Allokationen/s; ebenso in `BtnReset_Click`, wo zudem das Zurücksetzen von `TxtStatusBadge.Foreground` fehlt)!
+   - **Ihr Fix:** Legen Sie die vier benötigten `SolidColorBrush`-Instanzen einmalig als `private static readonly SolidColorBrush` Felder an, rufen Sie im statischen Konstruktor `static MainWindow()` jeweils `.Freeze()` darauf auf und verwenden Sie in `OnTelemetryTick` sowie `BtnReset_Click` ausschließlich diese eingefrorenen Referenzen.
+2. **Aufgabe 1.2 – Gleitende Fenster-Auswertung mit `CircularBuffer<double>` (`WelfordStatistics.cs` & `MainWindow.xaml.cs`):**
+   - Aktuell wird in `OnTelemetryTick` zwar `_buffer.Add(signal)` aufgerufen, die im Ringpuffer gespeicherten letzten 500 Messwerte ($10\,\text{s}$ Historie) werden aber noch nirgends ausgewertet.
+   - Implementieren Sie in `Statistics/WelfordStatistics.cs` die statische, allokationsfreie Methode `public static (double Mean, double Min, double Max) ComputeWindowStats(CircularBuffer<double> buffer, double[] scratch)`, die den Ringpuffer via `buffer.CopyTo(scratch)` in das übergebene Array kopiert und in einer `for`-Schleife (bis `buffer.Count`) den gleitenden **Fenster-Mittelwert**, **Fenster-Min** und **Fenster-Max** bestimmt (für `buffer.Count == 0` Rückgabe `(0.0, 0.0, 0.0)`).
+   - Legen Sie in `MainWindow.xaml.cs` einmalig das Feld `private readonly double[] _windowCopy = new double[BufferCapacity];` an (kein `new` im Timer-Tick!) und geben Sie die 10-Sekunden-Fensterwerte in `TxtFooter` im Direktvergleich zum globalen Langzeit-Welford-Mittelwert (`_welford.Mean`) aus.
+   - *Selbsttest-Tipp (Golden Reference Numbers):* Speist man die 6 Werte `[10, 20, 30, 40, 50, 90]` in `WelfordStatistics` und in einen `CircularBuffer<double>(4)` ein, überschreibt der Ringpuffer `10` und `20` (`CopyTo` liefert `[30, 40, 50, 90]`): `ComputeWindowStats` ergibt exakt `Mean = 52,5`, `Min = 30,0`, `Max = 90,0`, während Welford über alle $k = 6$ Werte exakt `Mean = 40,0`, `M2 = 4000,0` und `Variance = 800,0` liefert. Im Live-Dashboard (fester Seed `Random(42)`, ohne Anomalie-Klick) müssen exakt bei $k = 500$ ($t = 10{,}0\,\text{s}$, erster voller Puffer) Fenster-Mean und Welford-`Mean` identisch `99,98` anzeigen (`Min = 82,06`, `Max = 117,39`, `Sigma = 10,80`, Toleranzband `[67,6 ... 132,4]`).
+3. **Aufgabe 1.3 – Entprellte Anomalie-Erkennung & 2. Signalkanal (Sollwert-Spur in `MainWindow.xaml.cs`):**
+   - **Anomalie-Zähler & Entprellung:** Erweitern Sie die Anomalie-Überwachung um einen Gesamtzähler `_anomalyCount` sowie eine Haltezeit von 25 Ticks ($0{,}5\,\text{s}$), damit ein kurzer Ausreißer-Peak im UI-Badge sichtbar bleibt und gezählt wird (inklusive sauberem Zurücksetzen in `BtnReset_Click`).
+   - **Zweiter Kanal im `WpfPlot`:** Fügen Sie einen zweiten `DataStreamer` (`_referenceStreamer = Plot1.Plot.Add.DataStreamer(BufferCapacity)` mit `_referenceStreamer.ViewScrollLeft()`) in grüner oder oranger Farbe hinzu, der das ungestörte ideale Referenzsignal $y_{\text{ref}}(t) = 100 + 15 \cdot \sin(2\pi \cdot 0{,}5 \cdot t)$ synchron zum verrauschten Messsignal plottet (und in `BtnReset_Click` ebenfalls geleert wird).
+   - *Selbsttest-Tipp:* Das ideale Referenzsignal erreicht bei $t = 0{,}5\,\text{s}$ ($k = 25$) exakt $y_{\text{ref}} = 115{,}0$, bei $t = 1{,}0\,\text{s}$ ($k = 50$) exakt $100{,}0$ und bei $t = 1{,}5\,\text{s}$ ($k = 75$) exakt $85{,}0$. Ein Klick auf *„Anomalie injizieren“* (`+45,0`) überschreitet die obere $+3\sigma$-Grenze (`~132,4`), erhöht `_anomalyCount` um `1` und hält den roten Alarmstatus für genau 25 Ticks ($0{,}5\,\text{s}$) aktiv.
+4. **Aufgabe 1.4 – Automatisierte Verifikation mit Unit-Tests (`dotnet test`):**
+   - Öffnen Sie `ScottPlotTelemetry.Tests/TelemetryTests.cs`, kommentieren Sie in `Test_TwoMemoryArchitecture_WelfordVsCircularBufferWindow()` den vorbereiteten `TODO [Stufe 1 - Aufgabe 1.4]`-Block für `WelfordStatistics.ComputeWindowStats(...)` ein (*Selbsttest-Referenz:* `winMean = 52.5`, `winMin = 30.0`, `winMax = 90.0` auf dem Ringpuffer-Fenster `[30, 40, 50, 90]`; prüfen Sie optional auch den leeren Puffer `Count == 0`) und führen Sie `dotnet test` aus, bis alle **5 Unit-Tests** im Projekt `ScottPlotTelemetry.Tests` fehlerfrei auf Grün stehen.
+
 
 ## 4. Stufe 2: Vertiefungsaufgabe / Track-Ausbau (Wahlmodell: Track A ODER Track B)
 
 > [!IMPORTANT]
 > **Wahlmodell – GENAU EINE Aufgabe (keine Doppelbelastung!):**  
 > Wählen Sie als 2er-Team für die Hausübung **entweder Track A (Industrie)** ODER **Track B (Simulation Game)**.  
-> Beide Tracks basieren auf ScottPlot 5, Multikanal-Streaming, Welford-Statistik und MSAGL-Graphen und führen zur Höchstpunktzahl (10 Punkte).
+> Beide Tracks bauen direkt auf Ihrem Ergebnis aus Stufe 1 (`ScottPlotTelemetry.sln`) auf, nutzen ScottPlot 5, Multikanal-Streaming, Welford-Statistik sowie MSAGL-Graphen und führen zur Höchstpunktzahl (10 Punkte).
 
-```
-                    ┌──────────────────────────────────────────────┐
-                    │ WÄHLEN SIE GENAU EINEN DER BEIDEN TRACKS:    │
-                    └──────────────────────┬───────────────────────┘
-                                           │
-                 ┌─────────────────────────┴─────────────────────────┐
-                 ▼                                                   ▼
-┌─────────────────────────────────┐                 ┌─────────────────────────────────┐
-│  Track A: Industrie & Mechatronik│                 │   Track B: Simulation Game      │
-│  Industrieller Antriebsprüfstand│                 │   Retro Arcade Racing HUD       │
-│  & Schwingungsüberwachung       │                 │   G-Kräfte, Speed & Streckengraph│
-└─────────────────────────────────┘                 └─────────────────────────────────┘
+```mermaid
+flowchart TD
+    Choice(["<b>Wählen Sie genau einen Track</b><br/><i>Stufe 2 · Wahlmodell</i>"]) -->|Industrie-Fokus| A["<b>Track A: Industrie</b><br/><i>Industrieller Antriebsprüfstand & Schwingungs-Leitstand</i>"]
+    Choice -->|Game-Fokus| B["<b>Track B: Simulation Game</b><br/><i>Retro Arcade Racing HUD & G-Force Telemetrie</i>"]
+    style Choice fill:#f8fafc,stroke:#475569,stroke-width:2px,color:#0f172a
+    style A fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    style B fill:#f0fdf4,stroke:#15803d,stroke-width:2px,color:#14532d
 ```
 
----
 
 ### Track A (Industrie): Industrieller Antriebsprüfstand & Schwingungs-Leitstand
 
@@ -103,7 +103,7 @@ Auf einem mechatronischen Motorprüfstand für Elektroantriebe werden Drehzahl $
    - Farblicher Warn-Marker, sobald das Signal für mehr als 3 aufeinanderfolgende Ticks außerhalb des Toleranzbandes liegt (Kavitations- oder Schlupf-Erkennung).
 2. **Arbeitspaket A.2 – Panel 2: Phasenraum-Betriebskennfeld ($M$ vs. $n$):**
    - Live-Scatter-Plot des aktuellen Arbeitspunktes im Drehmoment-Drehzahl-Kennfeld.
-   - Einblendung der thermischen Leistungsgrenze ($P = 2\pi n M \le P_{\max}$).
+   - Einblendung der thermischen Leistungsgrenze ($P = 2\pi \frac{n}{60} M \le P_{\max}$ für $n$ in $\text{min}^{-1}$ bzw. $P = 2\pi n M$ für $n$ in $\text{s}^{-1}$).
 3. **Arbeitspaket A.3 – Panel 3: Schwingungs-Histogramm mit Normalverteilungskurve:**
    - Echtzeit-Histogramm der Vibrationsamplituden in 20 Bins.
    - Dynamisch überlagerte theoretische Gaußsche Glockenkurve basierend auf Welford-Mittelwert und Varianz.
@@ -112,7 +112,6 @@ Auf einem mechatronischen Motorprüfstand für Elektroantriebe werden Drehzahl $
    - Sensor-Knoten färben sich bei Toleranzüberschreitung von Grün auf Rot.
    - *(Hinweis: Das NuGet-Paket `AutomaticGraphLayout.WpfGraphControl` ist in `ScottPlotTelemetry.csproj` bereits vorinstalliert; der Namespace lautet `Microsoft.Msagl.WpfGraphControl`).*
 
----
 
 ### Track B (Simulation Game): Retro Arcade Racing HUD & G-Force Telemetrie
 
@@ -128,26 +127,24 @@ Im Telemetrie-Center eines Sim-Racing-Spiels analysiert die Boxencrew das Fahrve
    - Phasenplot von Querbeschleunigung $a_y$ gegen Längsbeschleunigung $a_x$ (G-G-Diagramm).
    - Einblendung des physikalischen Reifenhaftungslimits (Kamm'scher Kreis mit $a_{\text{res}} = \sqrt{a_x^2 + a_y^2} \le \mu \cdot g$).
    - Farbcodierung der Punkte: Grün = Voller Grip, Orange = Untersteuern/Drift, Rot = Traktionsabriss.
-3. **Arbeitspaket B.3 – Panel 3: Rundenzeit- & Bremsverzögerungs-Histogramm:**
+3. **Arbeitspaket B.3 – Panel 3: Bremsverzögerungs-Histogramm mit Gauß-Überlagerung:**
    - Live-Histogramm der Verzögerungswerte beim Anbremsen mit Gauß-Kurvenüberlagerung.
 4. **Arbeitspaket B.4 – Streckentopologie mit MSAGL:**
    - Topologischer Rundkurs-Graph mit Sektoren (`Sektor 1`, `Sektor 2`, `Sektor 3`), Kurvenknoten (`Hairpin`, `Chicane`) und `Boxengasse`.
    - Der aktuelle Aufenthaltsort des Boliden wird durch Hervorhebung des aktiven Knotens visualisiert.
 
----
 
 ## 5. Akzeptanzkriterien & Bewertungsrubrik (10 Punkte)
 
 | Kriterium | Punkte | Beschreibung |
 | :--- | :---: | :--- |
-| **Saubere ScottPlot-5-Architektur** | 3 P. | Konsequente Nutzung der modernen ScottPlot-5-API (`WpfPlot`, `DataStreamer`/`DataLogger`). Keine veralteten v4-Aufrufe. |
-| **Allokationsfreie Pufferverwaltung** | 2 P. | 0 Byte GC-Allokation im Render-Loop. Saubere Nutzung vorallokierter Ringpuffer. |
-| **Mathematisch exakte Welford-Statistik** | 3 P. | Fehlerfreie Implementierung des Welford-Algorithmus mit $\pm 3\sigma$-Band und Histogramm-Anbindung. |
-| **Topologie-Visualisierung mit MSAGL** | 1 P. | Einbindung des interaktiven System- bzw. Streckengraphen via MSAGL-WPF-Control. |
-| **Dokumentation & Code-Qualität** | 1 P. | Nachvollziehbarer Bericht in `README.md` mit Screenshot des Dashboards und Performance-Profil. |
+| **Saubere ScottPlot-5-Architektur** | 3 P. | Konsequente Nutzung der modernen ScottPlot-5-API (`WpfPlot`, `DataStreamer`, `Scatter`, `Bars`). Keine veralteten v4-Aufrufe. |
+| **Allokationsfreie Pufferverwaltung** | 2 P. | 0 Byte GC-Allokation im 50-Hz-Render-Loop (`Freeze()`-Brushes, vorallokierter Ringpuffer `CircularBuffer<double>` & `ComputeWindowStats`). |
+| **Mathematisch exakte Welford-Statistik & Unit-Tests** | 3 P. | Fehlerfreie Welford-Rekursion mit entprelltem $\pm 3\sigma$-Band, Gauß-Histogramm-Überlagerung und grüner `dotnet test`-Testsuite (`ScottPlotTelemetry.Tests`). |
+| **Topologie-Visualisierung mit MSAGL** | 1 P. | Einbindung des interaktiven Antriebsstrang- bzw. Streckengraphen via `Microsoft.Msagl.WpfGraphControl` mit Live-Knotenfärbung. |
+| **Dokumentation & Code-Qualität** | 1 P. | Nachvollziehbarer Bericht in `README.md` mit Screenshot des Dashboards und kurzem GC-/Performance-Nachweis. |
 | **Gesamt** | **10 P.** | **100 % der Übungseinheit** |
 
----
 
 ## 6. Online-Recherche-Box
 
@@ -161,7 +158,6 @@ Im Telemetrie-Center eines Sim-Racing-Spiels analysiert die Boxencrew das Fahrve
   - `Welford algorithm online running variance C# zero allocation`
   - `MSAGL WPF GraphControl custom nodes tutorial`
 
----
 
 ## 7. Vibe-Coding Prompting-Tipps
 
@@ -178,7 +174,6 @@ Implementiere den Welford-Algorithmus zur Berechnung des gleitenden Mittelwerts 
 Das Streaming muss 50 Mal pro Sekunde ohne Garbage-Collection-Allokationen (kein 'new double[]' im Timer-Loop) laufen.
 ```
 
----
 
 ## 8. 🔍 Leitfragen für den Live-Showcase & Code-Defense (Säule 2b)
 

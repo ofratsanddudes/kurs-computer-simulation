@@ -25,6 +25,8 @@ Dieses Kapitel umfasst die folgenden Abschnitte:
 
 ---
 
+<!-- _class: showcase -->
+
 ### Live-Showcase & Code-Defense: Termin 06
 
 Präsentation der Hausübung aus Termin 06 (**Stufe 1: Basisaufgabe** + **Stufe 2: Track A oder B**, [Aufgabenblatt 06](../../06_Multithreading_und_TPL/Uebung/Aufgabenblatt.md)):
@@ -55,6 +57,29 @@ Präsentation der Hausübung aus Termin 06 (**Stufe 1: Basisaufgabe** + **Stufe 
 > **Code-Defense (Säule 2b, 20 %):** Live-Vorführung am Beamer. Stresstest des kooperativen Not-Aus-Abbruchs (`CancellationToken`) unter Volllast.
 
 ---
+
+<!-- _class: recap -->
+
+### Kontext & Einordnung: Von paralleler Infrastruktur zur gekoppelten Strukturmechanik
+
+<div class="columns top">
+<div class="three">
+
+Mit **Termin 06** steht unser Unterbau – heute starten wir in die **4 Simulationsmodellarten (T07–T10)**:
+
+- **Brücke zu T03 (2D-Canvas):** Unser Tragwerks-Editor exportierte bereits Knoten $(x, y)$, Stäbe und Lasten $\vec{F}$ als JSON – noch ohne Kräfte!
+- **Heute (1. Modellart: Statik):** Wir stellen die Steifigkeitsmatrix $\mathbf{K}$ auf und lösen $\mathbf{K} \cdot \mathbf{u} = \mathbf{f}$ via **Cholesky** (`Math.NET`).
+- **Ausblick:** Statik beschreibt das Gleichgewicht ($\sum \vec{F} = \mathbf{0}$) vor der Dynamik in T08–T10.
+
+</div>
+<div class="two">
+
+![](./Diagramme/Semester_Bruecke_T07.svg)
+
+</div>
+</div>
+
+---
 ## 7.1: Einführung und historische Entwicklung
 
 Dieser Abschnitt umfasst die folgenden Inhalte:
@@ -64,19 +89,6 @@ Dieser Abschnitt umfasst die folgenden Inhalte:
 - Das Fachwerk als Anwendungsbeispiel
 - Historischer Abriss der Fachwerktheorie
 - Typische Fragestellungen für die Modellierung
-
----
-
-### Rückblick & Brücke: Wo stehen wir in der Vorlesung?
-
-Mit **Termin 06** haben wir unseren Unterbau aus Visualisierung (T02–T05) und Multithreading (T06) abgeschlossen – heute starten wir in die **4 mathematischen Simulationsmodellarten (T07–T10)**!
-
-- **Direkte Brücke zurück zu Termin 03 (2D-Vektorgrafik im Canvas):**
-  - Erinnern Sie sich an Ihren **2D-CAD-Tragwerks-Inspektor bzw. Poly-Bridge-Editor aus Termin 03**: Dort konnten wir Knoten $(x, y)$, Stäbe und Lastpfeile $\vec{F}$ bereits maßstabsgetreu zeichnen und als JSON speichern – aber die Brücke war noch „tot“ (reine Geometrie ohne Kräfteberechnung!).
-- **Was wir heute in Termin 07 ergänzen (1. Modellart: Statik):**
-  - Heute hauchen wir genau dieser Geometrie aus Termin 03 echte **Elastostatik** ein: Wir stellen aus den Knoten und Stäben die globale Steifigkeitsmatrix $\mathbf{K}$ auf und lösen das lineare Gleichungssystem $\mathbf{K} \cdot \mathbf{u} = \mathbf{f}$ über die **Cholesky-Zerlegung** (`Math.NET`).
-- **Einordnung ins große Ganze (Vom Ruhezustand zur Dynamik):**
-  - Statische Modelle beschreiben das **zeitunabhängige Gleichgewicht ($\sum \vec{F} = \mathbf{0}$)** – der logische erste Schritt vor den zeitabhängigen Systemen in Termin 08 bis 10.
 
 ---
 
@@ -1076,6 +1088,8 @@ Vector<double> fp = kpf.Multiply(uf); // Auflagerreaktionskräfte
 
 ---
 
+<!-- _class: summary -->
+
 # Zusammenfassung Kapitel 7
 
 - **Statische Modelle** beschreiben Systeme im Kräfte- und Momentengleichgewicht.
@@ -1086,6 +1100,19 @@ Vector<double> fp = kpf.Multiply(uf); // Auflagerreaktionskräfte
 - Die Visualisierung der berechneten Verformungen und Kräfte erfolgt über 2D-Vektorgrafiken (Kapitel 3) bzw. 3D-OpenGL (Kapitel 5).
 
 ---
+
+<!-- _class: outlook -->
+
+### Ausblick: Vom Gleichgewicht zur Bewegung (Termin 08)
+
+Mit der FEM-Steifigkeitsmatrix $\mathbf{K}\mathbf{u} = \mathbf{f}$ und der Cholesky-Zerlegung beherrschen wir nun das **zeitunabhängige statische Gleichgewicht** ($\sum \vec{F} = \mathbf{0}$):
+
+- **Wo Statik endet:** Sobald Antriebskräfte, Trägheiten und Dämpfungen wirken ($\sum \vec{F} = m \cdot \ddot{\mathbf{x}} \neq \mathbf{0}$), reicht kein einzelnes lineares Gleichungssystem mehr aus.
+- **Nächster Schritt (Termin 08):** Wir steigen ein in **kontinuierliche Differentialgleichungen (ODEs)**, modulare S-Functions, **Runge-Kutta 4 (RK4)** und geschlossene PID-Regelkreise!
+
+---
+
+<!-- _class: homework -->
 
 ### Hausübung Termin 07: Statik, FEM & Cholesky
 

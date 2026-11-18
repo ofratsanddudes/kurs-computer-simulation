@@ -1,51 +1,114 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 270 420" width="270" height="420">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 46 295 374" width="295" height="374">
   <defs>
+    <!-- @svg-palette-defs:start -->
+    <linearGradient id="grad-sem-info" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0f9ff" />
+      <stop offset="100%" stop-color="#bae6fd" />
+    </linearGradient>
+    <linearGradient id="grad-sem-info-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0369a1" />
+      <stop offset="100%" stop-color="#075985" />
+    </linearGradient>
+    <linearGradient id="grad-sem-success" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0fdf4" />
+      <stop offset="100%" stop-color="#dcfce7" />
+    </linearGradient>
+    <linearGradient id="grad-sem-success-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#15803d" />
+      <stop offset="100%" stop-color="#166534" />
+    </linearGradient>
+    <linearGradient id="grad-sem-card" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f1f5f9" />
+    </linearGradient>
+    <linearGradient id="grad-sem-muted" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+    <linearGradient id="grad-sem-muted-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#475569" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+    <linearGradient id="grad-sem-neutral" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+    <linearGradient id="grad-sem-neutral-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <!-- @svg-palette-defs:end -->
     <style>
-      .hdr { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14.5px; font-weight: bold; fill: #004B96; text-anchor: middle; }
-      .sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; fill: #475569; text-anchor: middle; }
+      
+/* @svg-palette:start */
+      .sem-info { fill: url(#grad-sem-info); stroke: #0369a1; }
+      .sem-info-bg { fill: url(#grad-sem-info); stroke: none; }
+      .sem-info-stroke { stroke: #0369a1; }
+      .sem-info-fill { fill: url(#grad-sem-info-fill); }
+      .sem-info-text { fill: #075985; }
+      .sem-success { fill: url(#grad-sem-success); stroke: #15803d; }
+      .sem-success-bg { fill: url(#grad-sem-success); stroke: none; }
+      .sem-success-stroke { stroke: #15803d; }
+      .sem-success-fill { fill: url(#grad-sem-success-fill); }
+      .sem-success-text { fill: #166534; }
+      .sem-card { fill: url(#grad-sem-card); stroke: #cbd5e1; }
+      .sem-card-bg { fill: url(#grad-sem-card); stroke: none; }
+      .sem-card-stroke { stroke: #cbd5e1; }
+      .sem-card-fill { fill: #cbd5e1; }
+      .sem-card-text { fill: #1e293b; }
+      .sem-muted { fill: url(#grad-sem-muted); stroke: #94a3b8; }
+      .sem-muted-bg { fill: url(#grad-sem-muted); stroke: none; }
+      .sem-muted-stroke { stroke: #94a3b8; }
+      .sem-muted-fill { fill: url(#grad-sem-muted-fill); }
+      .sem-muted-text { fill: #334155; }
+      .sem-neutral { fill: url(#grad-sem-neutral); stroke: #334155; }
+      .sem-neutral-bg { fill: url(#grad-sem-neutral); stroke: none; }
+      .sem-neutral-stroke { stroke: #334155; }
+      .sem-neutral-fill { fill: url(#grad-sem-neutral-fill); }
+      .sem-neutral-text { fill: #0f172a; }
+      /* @svg-palette:end */
+.hdr { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14.5px; font-weight: bold;  text-anchor: middle; }
+      .sub { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;  text-anchor: middle; }
       .lbl { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: bold; text-anchor: middle; }
-      .desc { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; fill: #334155; text-anchor: middle; }
-      .cad { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: bold; fill: #0f172a; }
+      .desc { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;  text-anchor: middle; }
+      .cad { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: bold;  }
     </style>
   </defs>
 
-  <rect width="270" height="420" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
-  <text x="135" y="24" class="hdr">DIN-406 Bemaßungskette</text>
-  <text x="135" y="42" class="sub">Normgerechte Bemaßung</text>
 
   <!-- Drawing Area -->
   <g transform="translate(15, 54)">
-    <rect width="240" height="210" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2" />
+    <rect class="sem-card-stroke" width="265" height="210" rx="6" fill="#ffffff" stroke-width="1.2" />
 
     <!-- Bauteil -->
-    <rect x="40" y="35" width="160" height="24" fill="#e2e8f0" stroke="#475569" stroke-width="2" />
-    <circle cx="40" cy="47" r="4" fill="#0f172a" />
-    <circle cx="200" cy="47" r="4" fill="#0f172a" />
-    <text x="120" y="52" class="cad" style="text-anchor: middle; fill: #334155;">Trägeruntergurt</text>
+    <rect class="sem-muted" x="40" y="35" width="160" height="24" stroke-width="2" />
+    <circle class="sem-neutral-fill" cx="40" cy="47" r="4" />
+    <circle class="sem-neutral-fill" cx="200" cy="47" r="4" />
+    <text x="120" y="52" class="cad sem-neutral-text" style="text-anchor: middle;">Trägeruntergurt</text>
 
     <!-- Extension lines -->
-    <line x1="40" y1="62" x2="40" y2="150" stroke="#64748b" stroke-width="1.5" />
-    <line x1="200" y1="62" x2="200" y2="150" stroke="#64748b" stroke-width="1.5" />
+    <line class="sem-muted-stroke" x1="40" y1="62" x2="40" y2="150" stroke-width="1.5" />
+    <line class="sem-muted-stroke" x1="200" y1="62" x2="200" y2="150" stroke-width="1.5" />
 
     <!-- Dimension Line -->
-    <line x1="40" y1="130" x2="200" y2="130" stroke="#0284c7" stroke-width="2" />
-    <polygon points="40,130 52,126 52,134" fill="#0284c7" />
-    <polygon points="200,130 188,126 188,134" fill="#0284c7" />
+    <line class="sem-info-stroke" x1="40" y1="130" x2="200" y2="130" stroke-width="2" />
+    <polygon class="sem-info-fill" points="40,130 52,126 52,134" />
+    <polygon class="sem-info-fill" points="200,130 188,126 188,134" />
 
     <!-- Dimension Text with shield rect -->
-    <rect x="95" y="116" width="50" height="22" rx="3" fill="#ffffff" stroke="#0284c7" stroke-width="1" />
-    <text x="120" y="132" class="cad" style="fill: #0369a1; text-anchor: middle;">4.00 m</text>
+    <rect class="sem-info-stroke" x="92" y="116" width="56" height="22" rx="3" fill="#ffffff" stroke-width="1" />
+    <text x="120" y="132" class="cad sem-neutral-text sem-info-text" style="text-anchor: middle;">4.00 m</text>
 
-    <text x="120" y="180" class="desc" style="fill: #64748b;">Überstand ca. 2 mm</text>
+    <text x="132.5" y="180" class="desc sem-neutral-text sem-muted-text" >Überstand ca. 2 mm</text>
   </g>
 
   <!-- Rules -->
   <g transform="translate(15, 276)">
-    <rect width="240" height="130" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5" />
-    <text x="120" y="24" class="lbl" style="fill: #15803d;">DIN 406 Regeln</text>
-    <text x="120" y="50" class="desc" style="font-weight: bold; fill: #166534;">1. Maßhilfslinien:</text>
-    <text x="120" y="68" class="desc" style="fill: #14532d;">Abstand zum Knoten &amp; Überstand</text>
-    <text x="120" y="90" class="desc" style="font-weight: bold; fill: #166534;">2. Maßlinie mit Pfeilen (1:3)</text>
-    <text x="120" y="112" class="desc" style="font-weight: bold; fill: #14532d;">3. Maßzahl zentriert mit Einheit</text>
+    <rect class="sem-success" width="265" height="130" rx="6" stroke-width="1.5" />
+    <text x="132.5" y="24" class="lbl sem-success-text" >DIN 406 Regeln</text>
+    <text x="132.5" y="50" class="desc sem-neutral-text sem-success-text" style="font-weight: bold;">1. Maßhilfslinien:</text>
+    <text x="132.5" y="68" class="desc sem-neutral-text sem-success-text" >Abstand zum Knoten &amp; Überstand</text>
+    <text x="132.5" y="90" class="desc sem-neutral-text sem-success-text" style="font-weight: bold;">2. Maßlinie mit Pfeilen (1:3)</text>
+    <text x="132.5" y="112" class="desc sem-neutral-text sem-success-text" style="font-weight: bold;">3. Maßzahl zentriert mit Einheit</text>
   </g>
 </svg>

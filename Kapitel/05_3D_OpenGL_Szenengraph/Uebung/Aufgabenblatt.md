@@ -3,16 +3,20 @@
 **Lehrveranstaltung:** Systemsimulation / Digitaler Zwilling  
 **Studiengang:** B.Sc. Automatisierungstechnik, 5. Semester  
 **Institution:** Fachhochschule Oberösterreich – Campus Wels  
-**Bearbeitungsform:** Zweistufige Hausübung im festen 2er-Team (1 Woche):
-- **Stufe 1 (Basisaufgabe):** Gemeinsames Fundament auf der C#-Vorlage (Richtwert ca. 60 Min. zu Hause)
-- **Stufe 2 (Vertiefungsaufgabe / Track-Ausbau):** Wahlmodell Track A (Industrie) **ODER** Track B (Simulation Game) (Richtwert ca. 3–4 h zu Hause)
-**Technologie-Vorgabe:** C# 12 / .NET 8 oder .NET 10, WPF mit `SharpGL.WPF.OpenGLControl`.  
-> [!CAUTION]
-> **Vorgreif-Sperre für Termin 05:**  
-> In dieser Einheit liegt der Fokus rein auf der **3D-Computergrafik, Kinematik und Szenengraph-Hierarchie via OpenGL**.  
-> **KEIN** Multithreading (`Parallel.For`), **KEINE** numerischen Gleichungslöser (Math.NET Cholesky), **KEINE** kontinuierlichen S-Functions! Die Kinematik wird rein über geometrische Transformationsmatrizen auf dem OpenGL-Stack berechnet.
+**Bearbeitungsform:** Zweistufige Hausübung im 2er-Team (1 Woche)
 
----
+| Stufe | Richtwert | Thema / Inhalt |
+| :--- | :--- | :--- |
+| **Stufe 1 (Basisaufgabe)** | ca. 60 Min. | Szenengraph-Rendering, `OrbitCamera.Pan` & TCP-Distanz auf `SceneGraph3D.sln` (`1.1`–`1.4`) |
+| **Stufe 2 – Track A (Industrie)** | ca. 3–4 h *(Wahl)* | Ausbau zum 4-Achs-SCARA mit Parallelgreifer, Teach-In & Pick-and-Place |
+| **Stufe 2 – Track B (Simulation Game)** | ca. 3–4 h *(Wahl)* | 3D Arcade Claw Crane (Jahrmarkt-Greifarm) |
+
+> [!IMPORTANT]
+> **Technische Rahmenbedingungen**
+> - **Plattform & Projekt:** C# 12 / .NET 8 oder .NET 10, bereitgestellte WPF-Projektmappe (ohne zusätzliche NuGet-Pakete)
+> - **Zugelassene APIs:** `SharpGL.WPF.OpenGLControl`, `System.Numerics.Matrix4x4`
+> - **Abgrenzung:** Single-threaded; Kinematik wird rein über geometrische Transformationsmatrizen und den OpenGL-Stack berechnet
+
 
 ## 1. Lernziele (Intended Learning Outcomes - ILOs)
 
@@ -23,7 +27,6 @@ Nach erfolgreicher Bearbeitung dieses Aufgabenblattes können Sie:
 4. **Vorwärtskinematik:** Die Endeffektor-Position (Tool Center Point - TCP) aus Gelenkvariablen (Drehwinkel, Verfahrwege) analytisch bestimmen und mit der 3D-Grafikdarstellung zur Deckung bringen.
 5. **Geometrische Interaktion & Kollisions-Snap:** Einfache Distanz- oder BoundingBox-Prüfungen in 3D implementieren, um Werkstücke oder Spielobjekte physikalisch plausibel aufzunehmen.
 
----
 
 ## 2. Mathematische Grundlagen
 
@@ -56,15 +59,15 @@ glPopMatrix(); // Zurück zum Elternsystem
 ```
 
 ### 2.3 Phong-Beleuchtungsmodell
-Die Lichtintensität $I$ eines Oberflächenpunktes setzt sich aus drei Komponenten zusammen:
-$$I = I_{\text{a}} k_{\text{a}} + I_{\text{d}} k_{\text{d}} (\vec{n} \cdot \vec{l}) + I_{\text{s}} k_{\text{s}} (\vec{r} \cdot \vec{v})^\alpha$$
-- $\vec{n}$: Normaleneinheitsvektor der Oberfläche ($\|\vec{n}\| = 1$)
+Die Lichtintensität $I_f$ eines Oberflächenpunktes setzt sich aus drei Komponenten zusammen:
+$$I_f = k_a I_{La} + k_d I_{Ld} \max(0, \vec{n} \cdot \vec{l}) + k_s I_{Ls} \left(\max(0, \vec{r} \cdot \vec{v})\right)^{\alpha_{\text{shiny}}}$$
+- $\vec{n}$: Normaleneinheitsvektor der Oberfläche ($\|\vec{n}\| = 1$; bei skalierten Körpern über `gl.Enable(OpenGL.GL_NORMALIZE)` normiert)
 - $\vec{l}$: Einheitsvektor zur Lichtquelle
 - $\vec{r} = 2(\vec{n} \cdot \vec{l})\vec{n} - \vec{l}$: Reflektierter Lichtstrahl
 - $\vec{v}$: Einheitsvektor zum Betrachter (Kamera)
-- $\alpha$: Glanzkoeffizient (Shininess)
+- $k_a, k_d, k_s$ und $I_{La}, I_{Ld}, I_{Ls}$: Materialkoeffizienten und Lichtintensitäten (Ambient, Diffuse, Specular)
+- $\alpha_{\text{shiny}} \in [1, 128]$: Glanzkoeffizient (`GL_SHININESS`)
 
----
 
 ## 3. Stufe 1: Basisaufgabe (Gemeinsames Fundament auf der C#-Vorlage, Richtwert ca. 60 Min.)
 
@@ -93,7 +96,6 @@ $$I = I_{\text{a}} k_{\text{a}} + I_{\text{d}} k_{\text{d}} (\vec{n} \cdot \vec{
 4. **Aufgabe 1.4 – Unit-Tests für Kamera-Panning & Reparenting prüfen (`SceneGraph3D.Tests/SceneGraphTests.cs`):**
    - Öffnen Sie `SceneGraph3D.Tests/SceneGraphTests.cs`, kommentieren Sie in `Test_SceneNode_Reparenting_And_OrbitCamera_Pan()` den `TODO`-Block für `OrbitCamera.Pan(...)` ein (*Selbsttest-Referenz:* Bei $\theta = 0^\circ$ verschiebt `Pan(2.0, 1.5)` den Zielpunkt exakt auf `LookAt = (-2.0, 1.5, 0.0)`) und führen Sie `dotnet test` aus, bis alle **5 Unit-Tests** auf Grün stehen.
 
----
 
 ## 4. Stufe 2: Vertiefungsaufgabe / Track-Ausbau (Wahlmodell: Track A ODER Track B)
 
@@ -102,21 +104,15 @@ $$I = I_{\text{a}} k_{\text{a}} + I_{\text{d}} k_{\text{d}} (\vec{n} \cdot \vec{
 > Wählen Sie als 2er-Team für die Hausübung **entweder Track A (Industrie)** ODER **Track B (Simulation Game)**.  
 > Beide Tracks basieren auf dem hierarchischen SharpGL-Szenengraphen, Transformationsmatrizen und 3D-Interaktion und führen zur Höchstpunktzahl (10 Punkte).
 
-```
-                    ┌──────────────────────────────────────────────┐
-                    │ WÄHLEN SIE GENAU EINEN DER BEIDEN TRACKS:    │
-                    └──────────────────────┬───────────────────────┘
-                                           │
-                 ┌─────────────────────────┴─────────────────────────┐
-                 ▼                                                   ▼
-┌─────────────────────────────────┐                 ┌─────────────────────────────────┐
-│  Track A: Industrie & Mechatronik│                 │   Track B: Simulation Game      │
-│  4-Achs-SCARA mit Parallelgreifer│                 │   3D Arcade Claw Crane          │
-│  Teach-In & Pick-and-Place      │                 │   Jahrmarkt-Greifarm-Simulator  │
-└─────────────────────────────────┘                 └─────────────────────────────────┘
+```mermaid
+flowchart TD
+    Choice(["<b>Wählen Sie genau einen Track</b><br/><i>Stufe 2 · Wahlmodell</i>"]) -->|Industrie-Fokus| A["<b>Track A: Industrie</b><br/><i>Ausbau zum 4-Achs-SCARA mit Parallelgreifer, Teach-In & Pick-and-Place</i>"]
+    Choice -->|Game-Fokus| B["<b>Track B: Simulation Game</b><br/><i>3D Arcade Claw Crane (Jahrmarkt-Greifarm)</i>"]
+    style Choice fill:#f8fafc,stroke:#475569,stroke-width:2px,color:#0f172a
+    style A fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    style B fill:#f0fdf4,stroke:#15803d,stroke-width:2px,color:#14532d
 ```
 
----
 
 ### Track A (Industrie): Ausbau zum 4-Achs-SCARA mit Parallelgreifer, Teach-In & Pick-and-Place
 
@@ -141,8 +137,8 @@ Da die ersten 3 Achsen ($\theta_1, \theta_2, d_3$) und die TCP-Validierung berei
    - *Wichtiger Praxis-Tipp zum `Reparenting`:* Beim Umhängen von `_workpieceNode` unter `_wristNode` müssen Sie dessen lokale Koordinaten auf `(Tx = 0, Ty = 0, Tz = 0)` relativ zum Greiferzentrum zurücksetzen (sonst bliebe `(1.10, 0.06, -0.40)` als lokaler Offset erhalten!); beim Ablegen unter `_rootNode` setzen Sie `(Tx, Ty, Tz)` auf die aktuelle Weltposition von Station B!
 4. **Arbeitspaket A.4 – Arbeitszellen-Spotlight & Optische Status-Signalisierung (`GL_LIGHT1`):**
    - Aktivieren Sie eine zweite Lichtquelle (`GL_LIGHT1`) als lokales Arbeitszellen-Spotlight oberhalb der Fertigungszelle und signalisieren Sie den aktuellen Greifstatus visuell an der Zelle bzw. am Greifer (z. B. Statusleuchte am Handgelenk oder Stations-Indikator: Orange = Werkstück bereit, Grün = Gegriffen/Transport aktiv, Blau = Auf Station B abgelegt).
+   - *Wichtiger OpenGL-Praxis-Tipp:* Rufen Sie `gl.Light(OpenGL.GL_LIGHT1, ...)` für `GL_POSITION` und `GL_SPOT_DIRECTION` in `OpenGlView_OpenGLDraw` **nach** `_camera.Apply(gl)` auf, damit Position und Strahlrichtung mit der aktuellen Kamera-Sichtmatrix transformiert werden und das Decken-Spotlight raumfest in Weltkoordinaten bleibt!
 
----
 
 ### Track B (Simulation Game): 3D Arcade Claw Crane (Jahrmarkt-Greifarm)
 
@@ -171,8 +167,8 @@ Vollständige mechatronische 3D-Simulation eines Jahrmarkt-Greifarm-Automaten (*
    - Liegt ein Objekt innerhalb des Greifradius ($d < r_{\text{grab}}$), wird es gegriffen (beim `Reparenting` unter den Klauenknoten lokale Koordinaten `(Tx, Ty, Tz) = (0, 0, 0)` setzen!) und folgt ab diesem Moment der Bewegung der Klaue bis zum Abwurf über dem Schacht.
 4. **Arbeitspaket B.4 – Atmosphärische Beleuchtung:**
    - Aktivieren Sie einen lokalen Spotlight-Scheinwerfer (`GL_LIGHT1`), der von der Decke des Automaten senkrecht auf die Spielfläche strahlt.
+   - *Wichtiger OpenGL-Praxis-Tipp:* Rufen Sie `gl.Light(OpenGL.GL_LIGHT1, ...)` für `GL_POSITION` und `GL_SPOT_DIRECTION` in `OpenGlView_OpenGLDraw` **nach** `_camera.Apply(gl)` auf, damit das Decken-Spotlight beim Drehen der Orbit-Kamera raumfest in Weltkoordinaten über der Spielfläche bleibt!
 
----
 
 ## 5. Akzeptanzkriterien & Bewertungsrubrik (10 Punkte)
 
@@ -182,10 +178,9 @@ Vollständige mechatronische 3D-Simulation eines Jahrmarkt-Greifarm-Automaten (*
 | **Orbit-Kamera mit Gimbal-Lock-Schutz & Panning** | 2 P. | Flüssige Maussteuerung (Links: Orbit $\theta, \phi$ mit Clamping auf $[-85^\circ, +85^\circ]$; Rechts: Zielpunkt-Panning; Mausrad: Zoom $r$). |
 | **Phong-Beleuchtung & Normalenvektoren** | 2 P. | Korrekt konfigurierte Lichtquellen, Materialglanzpunkte und fehlerfreie Normalenvektoren an allen Flächen (inkl. Greifer und Werkstücken). |
 | **Animierte Bahnsteuerung & Greif-Interaktion** | 2 P. | **Track A:** Flüssig interpoliertes Teach-In (`DispatcherTimer`) + Pick-and-Place-Werkstücktransport mit TCP-Deckung. **Track B:** Vollständiger animierter Greifzyklus mit 3D-Distanzprüfung. |
-| **Dokumentation & Code-Qualität** | 1 P. | Saubere Gliederung der Szenenknoten, aussagekräftige `README.md` mit Screenshot und Kinematik-Schema. |
+| **Unit-Tests, Dokumentation & Code-Qualität** | 1 P. | Grüne Unit-Test-Suite (`SceneGraph3D.Tests` via `dotnet test`), saubere Gliederung der Szenenknoten sowie aussagekräftige `README.md` mit Screenshot und Kinematik-Schema. |
 | **Gesamt** | **10 P.** | **100 % der Übungseinheit** |
 
----
 
 ## 6. Online-Recherche-Box
 
@@ -199,7 +194,6 @@ Vollständige mechatronische 3D-Simulation eines Jahrmarkt-Greifarm-Automaten (*
   - `OpenGL spherical camera orbit clamped pitch gimbal lock`
   - `OpenGL hierarchical modeling glPushMatrix robotic arm`
 
----
 
 ## 7. Vibe-Coding Prompting-Tipps
 
@@ -217,7 +211,6 @@ Berechne für alle Flächen (Würfel, Zylinder) saubere Normalenvektoren mit gl.
 Implementiere eine Orbit-Kamera in Kugelkoordinaten, deren Elevation phi auf maximal +-85 Grad geklemmt ist.
 ```
 
----
 
 ## 8. 🔍 Leitfragen für den Live-Showcase & Code-Defense (Säule 2b)
 

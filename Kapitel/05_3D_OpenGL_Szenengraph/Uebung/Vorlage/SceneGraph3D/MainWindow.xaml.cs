@@ -167,25 +167,31 @@ public partial class MainWindow : Window
     {
         OpenGL gl = args.OpenGL;
 
-        // Tiefenprüfung aktivieren
+        // Tiefenprüfung & automatische Normalen-Renormierung (wichtig nach gl.Scale!) aktivieren
         gl.Enable(OpenGL.GL_DEPTH_TEST);
+        gl.Enable(OpenGL.GL_NORMALIZE);
 
-        // Phong-Beleuchtungsmodell
+        // Phong-Beleuchtungsmodell: Globales Raumlicht einmalig für die gesamte Szene setzen
         gl.Enable(OpenGL.GL_LIGHTING);
-        gl.Enable(OpenGL.GL_LIGHT0);
+        float[] globalAmbient = [0.25f, 0.25f, 0.25f, 1.0f];
+        gl.LightModel(OpenGL.GL_LIGHT_MODEL_AMBIENT, globalAmbient);
 
+        // Hauptlichtquelle GL_LIGHT0: Position (Punktlicht w=1), Diffus- und Glanzanteil
+        gl.Enable(OpenGL.GL_LIGHT0);
         float[] lightPos = [10.0f, 20.0f, 15.0f, 1.0f];
-        float[] lightAmbient = [0.25f, 0.25f, 0.25f, 1.0f];
         float[] lightDiffuse = [0.85f, 0.85f, 0.85f, 1.0f];
         float[] lightSpecular = [1.0f, 1.0f, 1.0f, 1.0f];
 
         gl.Light(OpenGL.GL_LIGHT0, OpenGL.GL_POSITION, lightPos);
-        gl.Light(OpenGL.GL_LIGHT0, OpenGL.GL_AMBIENT, lightAmbient);
         gl.Light(OpenGL.GL_LIGHT0, OpenGL.GL_DIFFUSE, lightDiffuse);
         gl.Light(OpenGL.GL_LIGHT0, OpenGL.GL_SPECULAR, lightSpecular);
 
+        // Color-Tracking für Ambient & Diffuse (k_a, k_d) + expliziter Materialglanz (k_s > 0, Shininess = 64)
         gl.Enable(OpenGL.GL_COLOR_MATERIAL);
         gl.ColorMaterial(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_AMBIENT_AND_DIFFUSE);
+        float[] matSpecular = [0.60f, 0.60f, 0.60f, 1.0f];
+        gl.Material(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_SPECULAR, matSpecular);
+        gl.Material(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_SHININESS, 64.0f);
 
         gl.ShadeModel(OpenGL.GL_SMOOTH);
         gl.ClearColor(0.08f, 0.08f, 0.08f, 1.0f);

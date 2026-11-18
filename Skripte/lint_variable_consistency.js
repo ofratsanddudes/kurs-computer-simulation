@@ -170,6 +170,8 @@ function extractSlideTokens(text) {
       .replace(/\\mathrm\{(\w+)\}/g, '$1')
       .replace(/\\min/g, 'min')
       .replace(/\\max/g, 'max')
+      .replace(/\\Delta\s*([A-Za-z])/g, 'delta_$1')
+      .replace(/Δ\s*([A-Za-z])/g, 'delta_$1')
       .replace(/\\Delta/g, 'delta')
       .replace(/\\delta/g, 'delta')
       .replace(/\\sigma/g, 'sigma')
@@ -385,12 +387,13 @@ function extractSlideGeometricVariables(slideText) {
   return Array.from(vars);
 }
 
-function auditChapterVariables(chapterDir) {
-  const folienPath = path.join(chapterDir, 'Folien.md');
+function auditChapterVariables(chapterDir, mdFileName = 'Folien.md') {
+  const folienPath = path.join(chapterDir, mdFileName);
   if (!fs.existsSync(folienPath)) {
-    return { error: 'Folien.md not found in ' + chapterDir, issues: [] };
+    return { error: `${mdFileName} not found in ${chapterDir}`, issues: [] };
   }
 
+  const isAppendix = mdFileName !== 'Folien.md';
   const content = fs.readFileSync(folienPath, 'utf8');
   const slides = content.split(/^---$/m);
   const issues = [];
@@ -411,9 +414,79 @@ function auditChapterVariables(chapterDir) {
   let currentSection = '';
   const sectionSlideHistory = [];
 
+  const abbrWhitelist = new Set([
+    'CPU', 'RAM', 'UI', 'WPF', 'FPS', 'GUI', 'CLI', 'JSON', 'XML', 'API', 'IDE', 'OS', 'GC',
+    'RGB', 'RGBA', 'BGRA', 'HTML', 'CSS', 'URL', 'PDF', 'USB', 'FH', 'OÖ', 'CAD', 'NET', 'LED',
+    'ODER', 'UND', 'NICHT', 'NUR', 'ALLE', 'KEIN', 'KEINE', 'STRIKT', 'EINEN', 'AUF', 'MIT', 'OHNE',
+    'SCARA', 'TCP', 'PID', 'ODE', 'LGS', 'MSAGL', 'RK2', 'RK4', 'ECTS', 'ILO', 'ILV', 'SWS', 'TODO',
+    'OK', 'VS', 'MAX', 'MIN', 'PPM', 'SI', 'EX', 'ST', 'LT', 'GT'
+  ]);
+  const chapFolder = path.basename(path.dirname(chapterDir));
+  const chapNumMatch = chapFolder.match(/^(\d+)_/);
+  const chapNum = chapNumMatch ? parseInt(chapNumMatch[1], 10) : -1;
+  const definedAbbrs = new Set();
+
+  if (chapNum > 0) {
+    const kapRoot = path.dirname(path.dirname(chapterDir));
+    if (fs.existsSync(kapRoot)) {
+      fs.readdirSync(kapRoot).sort().forEach(d => {
+        const m = d.match(/^(\d+)_/);
+        if (m && parseInt(m[1], 10) < chapNum) {
+          const prevMd = path.join(kapRoot, d, 'Folien', 'Folien.md');
+          if (fs.existsSync(prevMd)) {
+            const pTxt = fs.readFileSync(prevMd, 'utf8');
+            for (const dm of pTxt.matchAll(/\(([A-ZÄÖÜ]{2,6})\)|,\s*([A-ZÄÖÜ]{2,6})\)/g)) {
+              definedAbbrs.add(dm[1] || dm[2]);
+            }
+          }
+        }
+      });
+    }
+  }
+  if (isAppendix) {
+    const mainMd = path.join(chapterDir, 'Folien.md');
+    if (fs.existsSync(mainMd)) {
+      const mTxt = fs.readFileSync(mainMd, 'utf8');
+      for (const dm of mTxt.matchAll(/\(([A-ZÄÖÜ]{2,6})\)|,\s*([A-ZÄÖÜ]{2,6})\)/g)) {
+        definedAbbrs.add(dm[1] || dm[2]);
+      }
+    }
+  }
+
   slides.forEach((rawSlide, idx) => {
     const slideNum = idx + 1;
     const slide = rawSlide.trim();
+    if (!slide || (idx <= 1 && /^(?:marp|theme|paginate|title|header|footer|style):/m.test(slide))) return;
+
+    const titleMatchEarly = slide.match(/^#{1,3}\s+(.+)$/m);
+    const slideTitleEarly = titleMatchEarly ? titleMatchEarly[1].replace(/\*\*|`/g, '').trim() : `Folie ${slideNum}`;
+    const proseOnly = slide
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/`[^`]+`/g, '')
+      .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+      .replace(/\[[^\]]*\]\([^)]+\)/g, '');
+    for (const dm of proseOnly.matchAll(/\(([A-ZÄÖÜ]{2,6})\)|,\s*([A-ZÄÖÜ]{2,6})\)/g)) {
+      definedAbbrs.add(dm[1] || dm[2]);
+    }
+    const usedAbbrs = proseOnly.match(/\b[A-ZÄÖÜ]{2,6}\b/g) || [];
+    const seenOnSlide = new Set();
+    for (const abbr of usedAbbrs) {
+      if (abbrWhitelist.has(abbr) || seenOnSlide.has(abbr)) continue;
+      seenOnSlide.add(abbr);
+      if (!definedAbbrs.has(abbr)) {
+        if (chapNum >= 6) {
+          issues.push({
+            slideNum,
+            title: slideTitleEarly,
+            rule: 5,
+            message: `Abkürzung "${abbr}" wird verwendet, bevor sie als "Langform (${abbr})" eingeführt wurde.`
+          });
+        }
+        definedAbbrs.add(abbr);
+      }
+    }
+
+    if (/<!--\s*_class:\s*appendix\s*-->/i.test(slide)) return;
 
     const sectionMatch = slide.match(/##\s+(\d+\.\d+:[^\n]+)/);
     if (sectionMatch) {
@@ -438,7 +511,9 @@ function auditChapterVariables(chapterDir) {
 
       const checkTokens = isStandaloneDiagram && currentSection && sectionTokensMap.has(currentSection)
         ? sectionTokensMap.get(currentSection)
-        : slideTokens;
+        : (isStandaloneDiagram && isAppendix && sectionSlideHistory.length > 1
+          ? new Set([...slideTokens, ...sectionSlideHistory[sectionSlideHistory.length - 2].tokens])
+          : slideTokens);
 
       svgVars.forEach(v => {
         if (!matchesAnyAlias(v, checkTokens)) {
@@ -566,20 +641,25 @@ if (require.main === module) {
 
   dirs.forEach(d => {
     const chapterPath = path.join(kapitelRoot, d, 'Folien');
-    const result = auditChapterVariables(chapterPath);
-    console.log(`Prüfe Kapitel ${d} (${result.totalSlides} Folien) ...`);
+    const decks = ['Folien.md', ...fs.readdirSync(chapterPath).filter(f => /^Folien_Anhang_.*\.md$/i.test(f)).sort()];
 
-    totalErrors += result.issues.length;
+    decks.forEach(deckFile => {
+      const result = auditChapterVariables(chapterPath, deckFile);
+      const label = deckFile === 'Folien.md' ? d : `${d} (${deckFile})`;
+      console.log(`Prüfe Kapitel ${label} (${result.totalSlides} Folien) ...`);
 
-    if (result.issues.length === 0) {
-      console.log('  ✓ OK: Alle Variablen sind didaktisch vollständig abgedeckt!\n');
-    } else {
-      console.log(`  ✗ ${result.issues.length} Fehler (Didaktische Variablen-Inkonsistenz):`);
-      result.issues.forEach(iss => {
-        console.log(`    - Folie ${iss.slideNum} [${iss.title}] (Regel ${iss.rule}): ${iss.message}`);
-      });
-      console.log('');
-    }
+      totalErrors += result.issues.length;
+
+      if (result.issues.length === 0) {
+        console.log('  ✓ OK: Alle Variablen sind didaktisch vollständig abgedeckt!\n');
+      } else {
+        console.log(`  ✗ ${result.issues.length} Fehler (Didaktische Variablen-Inkonsistenz):`);
+        result.issues.forEach(iss => {
+          console.log(`    - Folie ${iss.slideNum} [${iss.title}] (Regel ${iss.rule}): ${iss.message}`);
+        });
+        console.log('');
+      }
+    });
   });
 
   console.log('================================================================');
